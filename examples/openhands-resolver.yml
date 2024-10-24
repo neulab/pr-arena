@@ -14,6 +14,6 @@ jobs:
       PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
       PAT_USERNAME: ${{ secrets.PAT_USERNAME }}
 
-      LLM_MODEL: ${{ secrets.LLM_MODEL }}
+      LLM_MODELS: ${{ secrets.LLM_MODELS }}
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
       LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}

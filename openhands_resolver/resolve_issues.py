@@ -10,6 +10,7 @@ import os
 import pathlib
 import subprocess
 import json
+import random
 
 from termcolor import colored
 from tqdm import tqdm
@@ -321,6 +322,66 @@ def issue_handler_factory(issue_type: str, owner: str, repo: str, token: str) ->
     else:
         raise ValueError(f"Invalid issue type: {issue_type}")
 
+async def resolve_issues_with_random_models(
+    owner: str,
+    repo: str,
+    token: str,
+    username: str,
+    max_iterations: int,
+    limit_issues: int | None,
+    num_workers: int,
+    output_dir: str,
+    llm_configs: list[LLMConfig],
+    runtime_container_image: str,
+    prompt_template: str,
+    issue_type: str,
+    repo_instruction: str | None,
+    issue_numbers: list[int] | None,
+) -> None:
+    """Randomly select two LLM models and call resolve_issues for each."""
+    
+    selected_llms = random.sample(llm_configs, 2)
+    logger.info(f"Selected LLM models: {selected_llms[0]} and {selected_llms[1]}")
+
+    llm_config = selected_llms[0]
+    logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
+    await resolve_issues(
+        owner,
+        repo,
+        token,
+        username,
+        max_iterations,
+        limit_issues,
+        num_workers,
+        output_dir,
+        llm_config,
+        runtime_container_image,
+        prompt_template,
+        issue_type,
+        repo_instruction,
+        issue_numbers,
+    )
+
+    llm_config = selected_llms[1]
+    logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
+    await resolve_issues(
+        owner,
+        repo,
+        token,
+        username,
+        max_iterations,
+        limit_issues,
+        num_workers,
+        output_dir,
+        llm_config,
+        runtime_container_image,
+        prompt_template,
+        issue_type,
+        repo_instruction,
+        issue_numbers,
+    )
+
+
 
 async def resolve_issues(
     owner: str,
@@ -562,11 +623,12 @@ def main():
         default="output",
         help="Output directory to write the results.",
     )
+    # (Check!) Suppose the user sends argument with comma seperated list of llm models.
     parser.add_argument(
-        "--llm-model",
+        "--llm-models",
         type=str,
         default=None,
-        help="LLM model to use.",
+        help="LLM models to use.",
     )
     parser.add_argument(
         "--llm-api-key",
@@ -620,11 +682,25 @@ def main():
     if not token:
         raise ValueError("Github token is required.")
 
-    llm_config = LLMConfig(
-        model=my_args.llm_model or os.environ["LLM_MODEL"],
-        api_key=my_args.llm_api_key or os.environ["LLM_API_KEY"],
-        base_url=my_args.llm_base_url or os.environ.get("LLM_BASE_URL", None),
-    )
+    # (Check!) Suppose all llm models are written in secrets, comma separated.
+    models = my_args.llm_models or os.environ["LLM_MODELS"]
+    
+    if models:
+        model_names = models.split(",")
+    else:
+        raise ValueError("No LLM models provided in either the arguments or environment variables.")
+    
+    llm_configs = []
+    
+    # (Check!) Suppose all the llm models are using the same api keys and base urls (: LLM Provider).
+    for model in model_names:
+        llm_configs.append(
+            LLMConfig(
+                model=model,
+                api_key=my_args.llm_api_key or os.environ["LLM_API_KEY"],
+                base_url=my_args.llm_base_url or os.environ.get("LLM_BASE_URL", None),
+            )
+        )
 
     repo_instruction = None
     if my_args.repo_instruction_file:
@@ -648,7 +724,7 @@ def main():
         prompt_template = f.read()
 
     asyncio.run(
-        resolve_issues(
+        resolve_issues_with_random_models(
             owner=owner,
             repo=repo,
             token=token,
@@ -658,7 +734,7 @@ def main():
             limit_issues=my_args.limit_issues,
             num_workers=my_args.num_workers,
             output_dir=my_args.output_dir,
-            llm_config=llm_config,
+            llm_configs=llm_configs,
             prompt_template=prompt_template,  # Pass the prompt template
             issue_type=issue_type,
             repo_instruction=repo_instruction,
