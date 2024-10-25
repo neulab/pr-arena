@@ -7,7 +7,7 @@ on:
         required: true
         type: number
     secrets:
-      LLM_MODEL:
+      LLM_MODELS:
         required: true
       LLM_API_KEY:
         required: true
@@ -44,13 +44,13 @@ jobs:
 
       - name: Check required environment variables
         env:
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
           PAT_USERNAME: ${{ secrets.PAT_USERNAME }}
         run: |
-          required_vars=("LLM_MODEL" "LLM_API_KEY" "PAT_TOKEN" "PAT_USERNAME")
+          required_vars=("LLM_MODELS" "LLM_API_KEY" "PAT_TOKEN" "PAT_USERNAME")
           for var in "${required_vars[@]}"; do
             if [ -z "${!var}" ]; then
               echo "Error: Required environment variable $var is not set."
@@ -90,7 +90,7 @@ jobs:
       - name: Attempt to resolve issue
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
@@ -112,7 +112,7 @@ jobs:
       - name: Create draft PR or push branch
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
