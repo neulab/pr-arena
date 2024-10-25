@@ -98,7 +98,7 @@ jobs:
         run: |
           # (Check!) Make sure to uncomment this before PR.
           # cd /tmp && python -m openhands_resolver.resolve_issues \
-          cd /tmp && python -m openhands_resolver/resolve_issues.py
+          cd /tmp && python -m openhands_resolver/resolve_issues
             --repo ${{ github.repository }} \
             --issue-numbers ${{ env.ISSUE_NUMBER }} \
             --issue-type ${{ env.ISSUE_TYPE }}
