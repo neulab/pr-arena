@@ -491,7 +491,7 @@ def main():
         if not my_args.issue_number.isdigit():
             raise ValueError(f"Issue number {my_args.issue_number} is not a number.")
         issue_number = int(my_args.issue_number)
-        output_path = os.path.join(my_args.output_dir, "output.jsonl")
+        output_path = os.path.join(my_args.output_dir, f"output{my_args.model_number}.jsonl")
         resolver_output = load_single_resolver_output(output_path, issue_number)
         process_single_issue(
             my_args.output_dir,
