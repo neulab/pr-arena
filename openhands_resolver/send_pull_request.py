@@ -455,7 +455,8 @@ def main():
     )
     parser.add_argument(
         "--model-number",
-        action="store_true",
+        type=int,
+        required=True,
         help="Get the number of model for the ARENA setting.",
     )
     my_args = parser.parse_args()
