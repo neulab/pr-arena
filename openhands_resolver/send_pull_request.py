@@ -392,8 +392,9 @@ def process_all_successful_issues(
     github_username: str,
     pr_type: str,
     fork_owner: str | None,
+    model_number: int,
 ) -> None:
-    output_path = os.path.join(output_dir, "output.jsonl")
+    output_path = os.path.join(output_dir, f"output{model_number}.jsonl")
     for resolver_output in load_all_resolver_outputs(output_path):
         if resolver_output.success:
             print(f"Processing issue {resolver_output.issue.number}")
@@ -452,6 +453,11 @@ def main():
         action="store_true",
         help="Send a pull request even if the issue was not successfully resolved.",
     )
+    parser.add_argument(
+        "--model-number",
+        action="store_true",
+        help="Get the number of model for the ARENA setting.",
+    )
     my_args = parser.parse_args()
 
     github_token = (
@@ -479,6 +485,7 @@ def main():
             my_args.pr_type,
             my_args.fork_owner,
             my_args.send_on_failure,
+            my_args.model_number,
         )
     else:
         if not my_args.issue_number.isdigit():
