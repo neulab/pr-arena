@@ -360,6 +360,7 @@ async def resolve_issues_with_random_models(
         issue_type,
         repo_instruction,
         issue_numbers,
+        1,
     )
 
     llm_config = selected_llms[1]
@@ -379,6 +380,7 @@ async def resolve_issues_with_random_models(
         issue_type,
         repo_instruction,
         issue_numbers,
+        2,
     )
 
 
@@ -398,6 +400,7 @@ async def resolve_issues(
     issue_type: str,
     repo_instruction: str | None,
     issue_numbers: list[int] | None,
+    model_number: int,
 ) -> None:
     """Resolve github issues.
 
@@ -468,7 +471,7 @@ async def resolve_issues(
                 repo_instruction = f.read()
 
     # OUTPUT FILE
-    output_file = os.path.join(output_dir, "output.jsonl")
+    output_file = os.path.join(output_dir, f"output{model_number}.jsonl")
     logger.info(f"Writing output to {output_file}")
     finished_numbers = set()
     if os.path.exists(output_file):
