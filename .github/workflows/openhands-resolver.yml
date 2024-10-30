@@ -72,7 +72,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
-          script: |
+          script: |  
             const issueType = process.env.ISSUE_TYPE;
             const endpoint = issueType === 'pr' ? 'pulls' : 'issues';
             github.rest[endpoint].createComment({
@@ -85,8 +85,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # (Check!) Make sure to uncomment this before PR.
-          # pip install openhands-resolver
+          pip install git+https://github.com/neulab/pr-arena.git
 
       - name: Attempt to resolve issue
         env:
@@ -96,9 +95,7 @@ jobs:
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
         run: |
-          # (Check!) Make sure to uncomment this before PR.
-          # cd /tmp && python -m openhands_resolver.resolve_issues \
-          cd /tmp && python -m openhands_resolver/resolve_issues
+          cd /tmp && python -m openhands_resolver.resolve_issues \
             --repo ${{ github.repository }} \
             --issue-numbers ${{ env.ISSUE_NUMBER }} \
             --issue-type ${{ env.ISSUE_TYPE }}
@@ -106,10 +103,15 @@ jobs:
       - name: Check resolution result
         id: check_result
         run: |
-          if cd /tmp && grep -q '"success":true' output/output.jsonl; then
-            echo "RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
+          if cd /tmp && grep -q '"success":true' output/output1.jsonl; then
+            echo "MODEL1_RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
           else
-            echo "RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
+            echo "MODEL1_RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
+          fi
+          if cd /tmp && grep -q '"success":true' output/output2.jsonl; then
+            echo "MODEL2_RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
+          else
+            echo "MODEL2_RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create draft PR or push branch
@@ -120,17 +122,33 @@ jobs:
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
         run: |
-          if [ "${{ steps.check_result.outputs.RESOLUTION_SUCCESS }}" == "true" ]; then
+          if [ "${{ steps.check_result.outputs.MODEL1_RESOLUTION_SUCCESS }}" == "true" ]; then
             cd /tmp && python -m openhands_resolver.send_pull_request \
               --issue-number ${{ env.ISSUE_NUMBER }} \
-              --pr-type draft | tee pr_result.txt && \
-              grep "draft created" pr_result.txt | sed 's/.*\///g' > pr_number.txt
+              --pr-type draft | tee pr_result1.txt && \
+              --model-number 1 \
+              grep "draft created" pr_result1.txt | sed 's/.*\///g' > pr_number1.txt
           else
             cd /tmp && python -m openhands_resolver.send_pull_request \
               --issue-number ${{ env.ISSUE_NUMBER }} \
               --pr-type branch \
+              --model-number 1 \
               --send-on-failure | tee branch_result.txt && \
-              grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name.txt
+              grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name1.txt
+          fi
+          if [ "${{ steps.check_result.outputs.MODEL2_RESOLUTION_SUCCESS }}" == "true" ]; then
+            cd /tmp && python -m openhands_resolver.send_pull_request \
+              --issue-number ${{ env.ISSUE_NUMBER }} \
+              --pr-type draft | tee pr_result2.txt && \
+              --model-number 2 \
+              grep "draft created" pr_result2.txt | sed 's/.*\///g' > pr_number2.txt
+          else
+            cd /tmp && python -m openhands_resolver.send_pull_request \
+              --issue-number ${{ env.ISSUE_NUMBER }} \
+              --pr-type branch \
+              --model-number 2 \
+              --send-on-failure | tee branch_result.txt && \
+              grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name2.txt
           fi
 
       - name: Comment on issue
@@ -140,16 +158,16 @@ jobs:
           script: |
             const fs = require('fs');
             const issueNumber = ${{ env.ISSUE_NUMBER }};
-            const success = ${{ steps.check_result.outputs.RESOLUTION_SUCCESS }};
+            const success = ${{ steps.check_result.outputs.MODEL1_RESOLUTION_SUCCESS }};
             
             let prNumber = '';
             let branchName = '';
             
             try {
               if (success) {
-                prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
+                prNumber = fs.readFileSync('/tmp/pr_number1.txt', 'utf8').trim();
               } else {
-                branchName = fs.readFileSync('/tmp/branch_name.txt', 'utf8').trim();
+                branchName = fs.readFileSync('/tmp/branch_name1.txt', 'utf8').trim();
               }
             } catch (error) {
               console.error('Error reading file:', error);
@@ -178,5 +196,42 @@ jobs:
               });
             }
 
-
-
+            const fs = require('fs');
+            const issueNumber = ${{ env.ISSUE_NUMBER }};
+            const success = ${{ steps.check_result.outputs.MODEL2_RESOLUTION_SUCCESS }};
+            
+            let prNumber = '';
+            let branchName = '';
+            
+            try {
+              if (success) {
+                prNumber = fs.readFileSync('/tmp/pr_number2.txt', 'utf8').trim();
+              } else {
+                branchName = fs.readFileSync('/tmp/branch_name2.txt', 'utf8').trim();
+              }
+            } catch (error) {
+              console.error('Error reading file:', error);
+            }
+            
+            if (success && prNumber) {
+              github.rest.issues.createComment({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
+              });
+            } else if (!success && branchName) {
+              github.rest.issues.createComment({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `An attempt was made to automatically fix this issue, but it was unsuccessful. A branch named '${branchName}' has been created with the attempted changes. You can view the branch [here](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${branchName}). Manual intervention may be required.`
+              });
+            } else {
+              github.rest.issues.createComment({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `The workflow to fix this issue encountered an error. Please check the workflow logs for more information.`
+              });
+            }
