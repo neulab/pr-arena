@@ -689,7 +689,7 @@ def main():
     models = my_args.llm_models or os.environ["LLM_MODELS"]
     
     if models:
-        model_names = models.split(",")
+        model_names = [model.strip() for model in models.split(",")]
     else:
         raise ValueError("No LLM models provided in either the arguments or environment variables.")
     
