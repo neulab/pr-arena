@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   auto-fix:
-    if: github.event_name == 'workflow_call' || github.event.label.name == 'fix-me'
+    if: github.event_name == 'workflow_call' || github.event.label.name == 'pr-arena'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -92,14 +92,14 @@ jobs:
         id: check_results
         run: |
           if cd /tmp && grep -q '"success":true' output/output1.jsonl; then
-            echo "MODEL1_RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
+            echo "MODEL1_RESOLUTION_SUCCESS=true" >> $GITHUB_ENV
           else
-            echo "MODEL1_RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
+            echo "MODEL1_RESOLUTION_SUCCESS=false" >> $GITHUB_ENV
           fi
           if cd /tmp && grep -q '"success":true' output/output2.jsonl; then
-            echo "MODEL2_RESOLUTION_SUCCESS=true" >> $GITHUB_OUTPUT
+            echo "MODEL2_RESOLUTION_SUCCESS=true" >> $GITHUB_ENV
           else
-            echo "MODEL2_RESOLUTION_SUCCESS=false" >> $GITHUB_OUTPUT
+            echo "MODEL2_RESOLUTION_SUCCESS=false" >> $GITHUB_ENV
           fi
 
       - name: Create draft PR or branch
@@ -110,11 +110,11 @@ jobs:
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
         run: |
-          if [ "${{ steps.check_result.outputs.MODEL1_RESOLUTION_SUCCESS }}" == "true" ]; then
+          if [ "${{ env.MODEL1_RESOLUTION_SUCCESS }}" == "true" ]; then
             cd /tmp && python -m openhands_resolver.send_pull_request \
               --issue-number ${{ env.ISSUE_NUMBER }} \
-              --pr-type draft | tee pr_result1.txt && \
               --model-number 1 \
+              --pr-type draft | tee pr_result1.txt && \
               grep "draft created" pr_result1.txt | sed 's/.*\///g' > pr_number1.txt
           else
             cd /tmp && python -m openhands_resolver.send_pull_request \
@@ -124,11 +124,11 @@ jobs:
               --send-on-failure | tee branch_result.txt && \
               grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name1.txt
           fi
-          if [ "${{ steps.check_result.outputs.MODEL2_RESOLUTION_SUCCESS }}" == "true" ]; then
+          if [ "${{ env.MODEL2_RESOLUTION_SUCCESS }}" == "true" ]; then
             cd /tmp && python -m openhands_resolver.send_pull_request \
               --issue-number ${{ env.ISSUE_NUMBER }} \
-              --pr-type draft | tee pr_result2.txt && \
               --model-number 2 \
+              --pr-type draft | tee pr_result2.txt && \
               grep "draft created" pr_result2.txt | sed 's/.*\///g' > pr_number2.txt
           else
             cd /tmp && python -m openhands_resolver.send_pull_request \
@@ -146,7 +146,7 @@ jobs:
           script: |
             const fs = require('fs');
             const issueNumber = ${{ env.ISSUE_NUMBER }};
-            const success1 = "${{ steps.check_result.outputs.MODEL1_RESOLUTION_SUCCESS }}" === "true";
+            const success1 = "${{ env.MODEL1_RESOLUTION_SUCCESS }}" === "true";
             
             let prNumber1 = '';
             let branchName1 = '';
@@ -184,7 +184,7 @@ jobs:
               });
             }
 
-            const success2 = "${{ steps.check_result.outputs.MODEL2_RESOLUTION_SUCCESS }}" === "true";
+            const success2 = "${{ env.MODEL2_RESOLUTION_SUCCESS }}" === "true";
             
             let prNumber2 = '';
             let branchName2 = '';
