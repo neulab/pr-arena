@@ -6,18 +6,6 @@ This project is inspired by [Copilot Arena](https://github.com/lmarena/copilot-a
 
 Follow the instruction below to setup the Arena setting for the OpenHands resolver.
 
-
-# OpenHands Github Backlog Resolver 🙌
-
-Do you have a bunch of open github issues that need to be resolved but no
-time to do it? What about asking an AI agent to do it for you instead?
-
-This tool allows you to do just that, point towards a github repository,
-and you can use open-source AI agents based on [OpenHands](https://github.com/all-hands-ai/openhands)
-to attempt to resolve issues for you.
-
-It's quite simple to get setup, just follow the instructions below.
-
 ## Using the GitHub Actions Workflow
 
 This repository includes a GitHub Actions workflow that can automatically attempt to generate a pair of pull requests for individual issues labeled with 'fix-me'. Follow the steps to use this workflow in your own repository:
