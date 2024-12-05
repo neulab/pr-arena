@@ -8,7 +8,7 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 
 ## Using the GitHub Actions Workflow
 
-This repository includes a GitHub Actions workflow that can automatically attempt to generate a pair of pull requests for individual issues labeled with 'fix-me'. Follow the steps to use this workflow in your own repository:
+This repository includes a GitHub Actions workflow that can automatically attempt to generate a pair of pull requests for individual issues labeled with 'pr-arena'. Follow the steps to use this workflow in your own repository:
 
 1. Prepare a github personal access token. You can:
     1. [Contact us](mailto:contact@all-hands.dev) and we will set up a token for the [openhands-agent](https://github.com/openhands-agent) account (if you want to make it clear which commits came from the agent.
@@ -23,9 +23,9 @@ This repository includes a GitHub Actions workflow that can automatically attemp
 5. Set up the following [GitHub secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) in your repository, or across your entire org if you want to only set ths once and use the resolver in multiple repositories:
    - `PAT_USERNAME`: The github username that you used to create the personal access token.
    - `PAT_TOKEN`: The personal access token for github.
-   - `LLM_MODELS`: The comma seperated LLM models to use (e.g., "litellm_proxy/claude-3-5-sonnet-20241022,litellm_proxy/claude-3-5-sonnet-20240620,litellm_proxy/gpt-4o-2024-08-06,litellm_proxy/gpt-4o-2024-05-13,litellm_proxy/gemini-1.5-pro-002,litellm_proxy/gemini-1.5-flash-002,litellm_proxy/Llama-3.1-405b-instruct,litellm_proxy/Llama-3.1-70b-instruct,litellm_proxy/deepseek-chat")
+   - `LLM_MODELS`: The comma seperated LLM models to use (i.e. litellm_proxy/claude-3-5-sonnet-20241022,litellm_proxy/claude-3-5-sonnet-20240620,litellm_proxy/gpt-4o-2024-08-06,litellm_proxy/gpt-4o-2024-05-13,litellm_proxy/gemini-1.5-pro-002,litellm_proxy/gemini-1.5-flash-002,litellm_proxy/Llama-3.1-405b-instruct,litellm_proxy/Llama-3.1-70b-instruct,litellm_proxy/deepseek-chat)
    - `LLM_API_KEY`: Your API key to access the LLM Router for the LLM service
-   - `LLM_BASE_URL`: The base URL for the LLM API ("https://llm-proxy.app.all-hands.dev")
+   - `LLM_BASE_URL`: The base URL for the LLM API (i.e. https://llm-proxy.app.all-hands.dev)
 
 
 6. To trigger the workflow, add the 'fix-me' label to any issue you want the AI to attempt to resolve in an Arena setting.
