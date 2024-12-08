@@ -71,7 +71,7 @@ def send_to_firebase (
     resolved_output1: ResolverOutput,
     resolved_output2: ResolverOutput,
     output_dir: str,
-    username: str,
+    owner: str,
     repo: str,
     issue_number: int,
     firebase_config: dict,
@@ -81,7 +81,7 @@ def send_to_firebase (
 
     Args:
         resolved_output (ResolverOutput): The resolved output to be sent.
-        username (str): GitHub username.
+        owner (str): GitHub owner.
         repo (str): GitHub repository name.
         issue_number (int): Issue number.
         firebase_config (dict): Firebase configuration.
@@ -90,19 +90,19 @@ def send_to_firebase (
     
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     
-    file_name = f"{username}_{repo}_{issue_number}.jsonl"
+    file_name = f"{owner}_{repo}_{issue_number}.jsonl"
     output_file = pathlib.Path(output_dir) / file_name
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
     output_data1.update({
-        "username": username,
+        "owner": owner,
         "repo": repo,
         "issue_number": issue_number
     })
     
     output_data2 = json.loads(resolved_output2.model_dump_json())
     output_data2.update({
-        "username": username,
+        "owner": owner,
         "repo": repo,
         "issue_number": issue_number
     })
@@ -127,7 +127,7 @@ def send_to_firebase (
     logger.info("3.2. Database complete")
     
     collection_name = "issues"
-    document_id = f"{username}-{repo}-{issue_number}"
+    document_id = f"{owner}-{repo}-{issue_number}"
 
     doc_ref = db.collection(collection_name).document(document_id)
     doc_ref.set(output_data)
@@ -839,7 +839,7 @@ def main():
         resolved_output1=resolver_output1,
         resolved_output2=resolver_output2,
         output_dir=my_args.output_dir,
-        username=username,
+        owner=owner,
         repo=repo,
         issue_number=int(my_args.issue_number),
         firebase_config=firebase_config

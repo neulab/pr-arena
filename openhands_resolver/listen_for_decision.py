@@ -160,18 +160,13 @@ def main():
 
     my_args = parser.parse_args()
     
-    _, repo = my_args.repo.split("/")
-    username = (
-        my_args.username
-        if my_args.username
-        else os.getenv("GITHUB_USERNAME")
-    )
+    owner, repo = my_args.repo.split("/")
     
     raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
     logger.info(f"Firebase Config Loaded... {firebase_config}")
     
-    get_selected_model_number (document_id=f"{username}-{repo}-{int(my_args.issue_number)}", firebase_config=firebase_config)
+    get_selected_model_number (document_id=f"{owner}-{repo}-{int(my_args.issue_number)}", firebase_config=firebase_config)
     
 if __name__ == "__main__":
     main()
