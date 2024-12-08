@@ -118,7 +118,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                body: `PR-Arena is now open! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`
+                body: `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`
             });
       
       - name: Wait for user's decision and save it to the GitHub environment
