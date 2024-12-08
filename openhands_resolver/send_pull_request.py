@@ -334,11 +334,12 @@ def process_single_issue(
     fork_owner: str | None,
     send_on_failure: bool,
 ) -> None:
-    if not resolver_output.success and not send_on_failure:
-        print(
-            f"Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation."
-        )
-        return
+    # [PR-Arena] For the arena setting, we create Pull Requests anyway.
+    # if not resolver_output.success and not send_on_failure:
+    #     print(
+    #         f"Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation."
+    #     )
+    #     return
 
     issue_type = resolver_output.issue_type
 

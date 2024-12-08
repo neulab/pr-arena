@@ -75,8 +75,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install git+https://github.com/JiseungHong/openhands-resolver.git
+          pip install firebase-admin
 
-      - name: Attempt to resolve issue
+      - name: Attempt to resolve issues and Send the Resolver Output to firebase.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LLM_MODELS: ${{ secrets.LLM_MODELS }}
@@ -101,43 +102,54 @@ jobs:
           else
             echo "MODEL2_RESOLUTION_SUCCESS=false" >> $GITHUB_ENV
           fi
+      
 
-      - name: Create draft PR or branch
+      - name: Post webpage link to GitHub issue comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = ${{ env.ISSUE_NUMBER }};
+            const repo = context.repo.repo
+            const owner = context.repo.owner
+            const firebaseWebpageURL = `https://pr-arena.web.app?id=${owner}_${repo}_${issueNumber}`;
+
+            github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: `PR-Arena is now open! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`
+            });
+      
+      - name: Wait for user's decision and save it to the GitHub environment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          GITHUB_USERNAME: ${{ secrets.PAT_USERNAME }}
+          PYTHONPATH: ""
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: |
+          cd /tmp && python -m openhands_resolver.listen_for_decision \
+            --repo ${{ github.repository }} \
+            --issue-number ${{ env.ISSUE_NUMBER }}
+          
+
+      - name: Create Pull Request for the selected branch
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
           LLM_MODELS: ${{ secrets.LLM_MODELS }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           PYTHONPATH: ""
+          SELECTED_MODEL: ${{ env.SELECTED }}
         run: |
-          if [ "${{ env.MODEL1_RESOLUTION_SUCCESS }}" == "true" ]; then
-            cd /tmp && python -m openhands_resolver.send_pull_request \
-              --issue-number ${{ env.ISSUE_NUMBER }} \
-              --model-number 1 \
-              --pr-type draft | tee pr_result1.txt && \
-              grep "draft created" pr_result1.txt | sed 's/.*\///g' > pr_number1.txt
-          else
-            cd /tmp && python -m openhands_resolver.send_pull_request \
-              --issue-number ${{ env.ISSUE_NUMBER }} \
-              --pr-type branch \
-              --model-number 1 \
-              --send-on-failure | tee branch_result.txt && \
-              grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name1.txt
-          fi
-          if [ "${{ env.MODEL2_RESOLUTION_SUCCESS }}" == "true" ]; then
-            cd /tmp && python -m openhands_resolver.send_pull_request \
-              --issue-number ${{ env.ISSUE_NUMBER }} \
-              --model-number 2 \
-              --pr-type draft | tee pr_result2.txt && \
-              grep "draft created" pr_result2.txt | sed 's/.*\///g' > pr_number2.txt
-          else
-            cd /tmp && python -m openhands_resolver.send_pull_request \
-              --issue-number ${{ env.ISSUE_NUMBER }} \
-              --pr-type branch \
-              --model-number 2 \
-              --send-on-failure | tee branch_result.txt && \
-              grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name2.txt
-          fi
+          cd /tmp && python -m openhands_resolver.send_pull_request \
+            --issue-number ${{ env.ISSUE_NUMBER }} \
+            --model-number $SELECTED_MODEL \
+            --pr-type draft | tee pr_result${SELECTED_MODEL}.txt && \
+            grep "draft created" pr_result${SELECTED_MODEL}.txt | sed 's/.*\///g' > pr_number.txt
 
       - name: Comment on issue
         uses: actions/github-script@v7
@@ -146,78 +158,19 @@ jobs:
           script: |
             const fs = require('fs');
             const issueNumber = ${{ env.ISSUE_NUMBER }};
-            const success1 = "${{ env.MODEL1_RESOLUTION_SUCCESS }}" === "true";
             
-            let prNumber1 = '';
-            let branchName1 = '';
-            
-            try {
-              if (success1) {
-                prNumber1 = fs.readFileSync('/tmp/pr_number1.txt', 'utf8').trim();
-              } else {
-                branchName1 = fs.readFileSync('/tmp/branch_name1.txt', 'utf8').trim();
-              }
-            } catch (error) {
-              console.error('Error reading file:', error);
-            }
-            
-            if (success1 && prNumber1) {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `A potential fix has been generated and a draft PR #${prNumber1} has been created. Please review the changes.`
-              });
-            } else if (!success1 && branchName1) {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `An attempt was made to automatically fix this issue, but it was unsuccessful. A branch named '${branchName1}' has been created with the attempted changes. You can view the branch [here](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${branchName1}). Manual intervention may be required.`
-              });
-            } else {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `The workflow to fix this issue encountered an error. Please check the workflow logs for more information.`
-              });
-            }
-
-            const success2 = "${{ env.MODEL2_RESOLUTION_SUCCESS }}" === "true";
-            
-            let prNumber2 = '';
-            let branchName2 = '';
+            let prNumber = '';
+            let branchName = '';
             
             try {
-              if (success2) {
-                prNumber2 = fs.readFileSync('/tmp/pr_number2.txt', 'utf8').trim();
-              } else {
-                branchName2 = fs.readFileSync('/tmp/branch_name2.txt', 'utf8').trim();
+              prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
+              } catch (error) {
+                console.error('Error reading file:', error);
               }
-            } catch (error) {
-              console.error('Error reading file:', error);
-            }
             
-            if (success2 && prNumber2) {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `A potential fix has been generated and a draft PR #${prNumber2} has been created. Please review the changes.`
+            github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
               });
-            } else if (!success2 && branchName2) {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `An attempt was made to automatically fix this issue, but it was unsuccessful. A branch named '${branchName2}' has been created with the attempted changes. You can view the branch [here](https://github.com/${context.repo.owner}/${context.repo.repo}/tree/${branchName2}). Manual intervention may be required.`
-              });
-            } else {
-              github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `The workflow to fix this issue encountered an error. Please check the workflow logs for more information.`
-              });
-            }

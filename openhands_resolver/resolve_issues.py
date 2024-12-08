@@ -44,6 +44,9 @@ from openhands_resolver.utils import (
     reset_logger_for_multiprocessing,
 )
 
+import firebase_admin
+from firebase_admin import credentials, firestore, initialize_app
+
 
 # Don't make this confgurable for now, unless we have other competitive agents
 AGENT_CLASS = "CodeActAgent"
@@ -55,6 +58,81 @@ def cleanup():
         print(f"Terminating child process: {process.name}")
         process.terminate()
         process.join()
+
+
+def load_firebase_config(config_json: str) -> dict:
+    """Load Firebase configuration from JSON string."""
+    try:
+        return json.loads(config_json)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid Firebase configuration JSON: {e}")
+
+def send_to_firebase (
+    resolved_output1: ResolverOutput,
+    resolved_output2: ResolverOutput,
+    output_dir: str,
+    username: str,
+    repo: str,
+    issue_number: int,
+    firebase_config: dict,
+) -> None:
+    """
+    Send the resolver output to Firebase Firestore.
+
+    Args:
+        resolved_output (ResolverOutput): The resolved output to be sent.
+        username (str): GitHub username.
+        repo (str): GitHub repository name.
+        issue_number (int): Issue number.
+        firebase_config (dict): Firebase configuration.
+    """
+    logger.info(f"2. Write down the resolver to {output_dir}/... .")
+    
+    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    file_name = f"{username}_{repo}_{issue_number}.jsonl"
+    output_file = pathlib.Path(output_dir) / file_name
+    
+    output_data1 = json.loads(resolved_output1.model_dump_json())
+    output_data1.update({
+        "username": username,
+        "repo": repo,
+        "issue_number": issue_number
+    })
+    
+    output_data2 = json.loads(resolved_output2.model_dump_json())
+    output_data2.update({
+        "username": username,
+        "repo": repo,
+        "issue_number": issue_number
+    })
+    
+    output_data = {"json1": output_data1, "json2": output_data2, "status": "pending"}
+    
+    logger.info(f"2.1. Resolvers: {output_data}")
+    
+    with open(output_file, "a") as output_fp:
+        output_fp.write(json.dumps(output_data) + "\n")
+    
+    logger.info("3. Sending jsonl file to firebase.")
+    
+    cred = credentials.Certificate(firebase_config)
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app(cred)
+    
+    logger.info("3.1. Credentials complete")
+    # Initialize Firestore client
+    db = firestore.client()
+    
+    logger.info("3.2. Database complete")
+    
+    collection_name = "issues"
+    document_id = f"{username}-{repo}-{issue_number}"
+
+    doc_ref = db.collection(collection_name).document(document_id)
+    doc_ref.set(output_data)
+
+    print(f"Data successfully written to Firestore collection '{collection_name}' with ID: {document_id}")
 
 
 def create_git_patch(
@@ -297,6 +375,7 @@ async def process_issue(
         comment_success=comment_success,
         success_explanation=success_explanation,
         error=state.last_error if state and state.last_error else None,
+        model=llm_config.model.split("/")[-1],
     )
     return output
 
@@ -337,7 +416,7 @@ async def resolve_issues_with_random_models(
     issue_type: str,
     repo_instruction: str | None,
     issue_numbers: list[int] | None,
-) -> None:
+) -> tuple[ResolverOutput, ResolverOutput | None]:
     """Randomly select two LLM models and call resolve_issues for each."""
     
     selected_llms = random.sample(llm_configs, 2)
@@ -345,7 +424,7 @@ async def resolve_issues_with_random_models(
 
     llm_config = selected_llms[0]
     logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
-    await resolve_issues(
+    resolverOutput1 = await resolve_issues(
         owner,
         repo,
         token,
@@ -365,7 +444,7 @@ async def resolve_issues_with_random_models(
 
     llm_config = selected_llms[1]
     logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
-    await resolve_issues(
+    resolverOutput2 = await resolve_issues(
         owner,
         repo,
         token,
@@ -382,8 +461,8 @@ async def resolve_issues_with_random_models(
         issue_numbers,
         2,
     )
-
-
+    
+    return resolverOutput1, resolverOutput2
 
 async def resolve_issues(
     owner: str,
@@ -401,7 +480,7 @@ async def resolve_issues(
     repo_instruction: str | None,
     issue_numbers: list[int] | None,
     model_number: int,
-) -> None:
+) -> ResolverOutput:
     """Resolve github issues.
 
     Args:
@@ -505,6 +584,8 @@ async def resolve_issues(
 
     # This sets the multi-processing
     logger.info(f"Using {num_workers} workers.")
+    
+    resolverOutput = None
 
     try:
         # Replace the ProcessPoolExecutor with asyncio.gather
@@ -527,20 +608,22 @@ async def resolve_issues(
                     .decode("utf-8")
                     .strip()
                 )
-
+            
+            resolverOutput = process_issue(
+                issue,
+                base_commit,
+                max_iterations,
+                llm_config,
+                output_dir,
+                runtime_container_image,
+                prompt_template,
+                issue_handler,
+                repo_instruction,
+                bool(num_workers > 1),
+            )
+            
             task = update_progress(
-                process_issue(
-                    issue,
-                    base_commit,
-                    max_iterations,
-                    llm_config,
-                    output_dir,
-                    runtime_container_image,
-                    prompt_template,
-                    issue_handler,
-                    repo_instruction,
-                    bool(num_workers > 1),
-                ),
+                resolverOutput,
                 output_fp,
                 pbar,
             )
@@ -561,6 +644,8 @@ async def resolve_issues(
 
     output_fp.close()
     logger.info("Finished.")
+    
+    return resolverOutput
 
 
 def main():
@@ -626,7 +711,6 @@ def main():
         default="output",
         help="Output directory to write the results.",
     )
-    # (Check!) Suppose the user sends argument with comma seperated list of llm models.
     parser.add_argument(
         "--llm-models",
         type=str,
@@ -725,8 +809,8 @@ def main():
             prompt_file = os.path.join(os.path.dirname(__file__), "prompts/resolve/basic-followup.jinja") 
     with open(prompt_file, 'r') as f:
         prompt_template = f.read()
-
-    asyncio.run(
+    
+    result = asyncio.run(
         resolve_issues_with_random_models(
             owner=owner,
             repo=repo,
@@ -743,6 +827,22 @@ def main():
             repo_instruction=repo_instruction,
             issue_numbers=issue_numbers,
         )
+    )
+    
+    resolver_output1, resolver_output2 = result
+    
+    raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
+    firebase_config = load_firebase_config(raw_config)
+    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    
+    send_to_firebase (
+        resolved_output1=resolver_output1,
+        resolved_output2=resolver_output2,
+        output_dir=my_args.output_dir,
+        username=username,
+        repo=repo,
+        issue_number=int(my_args.issue_number),
+        firebase_config=firebase_config
     )
 
 
