@@ -463,6 +463,32 @@ async def resolve_issues_with_random_models(
         issue_numbers,
         2,
     )
+    # tasks = []
+    # for idx, llm_config in enumerate(selected_llms, start=1):
+    #     logger.info(f"Resolving issues using {llm_config.model.split('/')[-1]}: {llm_config}")
+    #     tasks.append(
+    #         resolve_issues(
+    #             owner,
+    #             repo,
+    #             token,
+    #             username,
+    #             max_iterations,
+    #             limit_issues,
+    #             num_workers,
+    #             output_dir,
+    #             llm_config,
+    #             runtime_container_image,
+    #             prompt_template,
+    #             issue_type,
+    #             repo_instruction,
+    #             issue_numbers,
+    #             idx,
+    #         )
+    #     )
+
+    # # Run tasks concurrently
+    # results = await asyncio.gather(*tasks)
+    # resolverOutput1, resolverOutput2 = results
     
     if asyncio.iscoroutine(resolverOutput1):
         logger.info(f"{resolverOutput1} is coroutine.")
@@ -624,7 +650,7 @@ async def resolve_issues(
                     .strip()
                 )
             
-            resolverOutput = process_issue(
+            resolverOutput = await process_issue(
                 issue,
                 base_commit,
                 max_iterations,
@@ -699,7 +725,8 @@ def main():
     parser.add_argument(
         "--max-iterations",
         type=int,
-        default=50,
+        # default=50,
+        default=1,
         help="Maximum number of iterations to run.",
     )
     parser.add_argument(
