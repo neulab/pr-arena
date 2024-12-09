@@ -648,7 +648,7 @@ async def resolve_issues(
     return resolverOutput
 
 
-def main():
+async def main():
 
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
     parser.add_argument(
@@ -834,14 +834,14 @@ def main():
         )
     )
     
-    resolver_output1, resolver_output2 = result
+    resolver_output1, resolver_output2 = await result
     
     raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
     logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     issue_number = issue_numbers[0]
-    send_to_firebase (
+    await send_to_firebase (
         resolved_output1=resolver_output1,
         resolved_output2=resolver_output2,
         output_dir=my_args.output_dir,
@@ -853,4 +853,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
