@@ -67,7 +67,7 @@ def load_firebase_config(config_json: str) -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid Firebase configuration JSON: {e}")
 
-def send_to_firebase (
+async def send_to_firebase (
     resolved_output1: ResolverOutput,
     resolved_output2: ResolverOutput,
     output_dir: str,
@@ -416,7 +416,9 @@ async def resolve_issues_with_random_models(
     issue_type: str,
     repo_instruction: str | None,
     issue_numbers: list[int] | None,
-) -> tuple[ResolverOutput, ResolverOutput | None]:
+    issue_number: int,
+    firebase_config: dict,
+) -> None:
     """Randomly select two LLM models and call resolve_issues for each."""
     
     selected_llms = random.sample(llm_configs, 2)
@@ -462,7 +464,20 @@ async def resolve_issues_with_random_models(
         2,
     )
     
-    return resolverOutput1, resolverOutput2
+    if asyncio.iscoroutine(resolverOutput1):
+        logger.info(f"{resolverOutput1} is coroutine.")
+    if asyncio.iscoroutine(resolverOutput2):
+        logger.info(f"{resolverOutput2} is coroutine.")
+    
+    await send_to_firebase (
+        resolved_output1=resolverOutput1,
+        resolved_output2=resolverOutput2,
+        output_dir=output_dir,
+        owner=owner,
+        repo=repo,
+        issue_number=issue_number,
+        firebase_config=firebase_config
+    )
 
 async def resolve_issues(
     owner: str,
@@ -648,7 +663,7 @@ async def resolve_issues(
     return resolverOutput
 
 
-async def main():
+def main():
 
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
     parser.add_argument(
@@ -815,7 +830,13 @@ async def main():
     with open(prompt_file, 'r') as f:
         prompt_template = f.read()
     
-    result = asyncio.run(
+    raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
+    firebase_config = load_firebase_config(raw_config)
+    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    
+    issue_number = issue_numbers[0]
+    
+    asyncio.run(
         resolve_issues_with_random_models(
             owner=owner,
             repo=repo,
@@ -831,27 +852,11 @@ async def main():
             issue_type=issue_type,
             repo_instruction=repo_instruction,
             issue_numbers=issue_numbers,
+            issue_number=issue_number,
+            firebase_config=firebase_config,
         )
-    )
-    
-    resolver_output1 = asyncio.run(result[0]) if asyncio.iscoroutine(result[0]) else result[0]
-    resolver_output2 = asyncio.run(result[1]) if asyncio.iscoroutine(result[1]) else result[1]
-    
-    raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
-    firebase_config = load_firebase_config(raw_config)
-    logger.info(f"Firebase Config Loaded... {firebase_config}")
-    
-    issue_number = issue_numbers[0]
-    send_to_firebase (
-        resolved_output1=resolver_output1,
-        resolved_output2=resolver_output2,
-        output_dir=my_args.output_dir,
-        owner=owner,
-        repo=repo,
-        issue_number=issue_number,
-        firebase_config=firebase_config
     )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
