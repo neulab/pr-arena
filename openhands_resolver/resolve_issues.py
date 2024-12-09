@@ -749,6 +749,11 @@ def main():
         choices=["issue", "pr"],
         help="Type of issue to resolve, either open issue or pr comments.",
     )
+    parser.add_argument(
+        "--firebase-config",
+        type=str,
+        help="Firebase configuration in JSON format."
+    )
 
     my_args = parser.parse_args()
 
@@ -835,13 +840,14 @@ def main():
     firebase_config = load_firebase_config(raw_config)
     logger.info(f"Firebase Config Loaded... {firebase_config}")
     
+    issue_number = issue_numbers[0]
     send_to_firebase (
         resolved_output1=resolver_output1,
         resolved_output2=resolver_output2,
         output_dir=my_args.output_dir,
         owner=owner,
         repo=repo,
-        issue_number=int(my_args.issue_number),
+        issue_number=issue_number,
         firebase_config=firebase_config
     )
 
