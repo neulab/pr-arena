@@ -834,14 +834,15 @@ async def main():
         )
     )
     
-    resolver_output1, resolver_output2 = await result
+    resolver_output1 = asyncio.run(result[0]) if asyncio.iscoroutine(result[0]) else result[0]
+    resolver_output2 = asyncio.run(result[1]) if asyncio.iscoroutine(result[1]) else result[1]
     
     raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
     logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     issue_number = issue_numbers[0]
-    await send_to_firebase (
+    send_to_firebase (
         resolved_output1=resolver_output1,
         resolved_output2=resolver_output2,
         output_dir=my_args.output_dir,
