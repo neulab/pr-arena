@@ -27,16 +27,17 @@ This repository includes a GitHub Actions workflow that can automatically attemp
    - `LLM_MODELS`: The comma seperated LLM models to use (i.e. litellm_proxy/neulab/claude-3-5-sonnet-20240620, litellm_proxy/neulab/gpt-4o-2024-05-13, litellm_proxy/neulab/gpt-4o-2024-08-06, litellm_proxy/neulab/gpt-4o-mini-2024-07-18, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo, litellm_proxy/neulab/Qwen/Qwen2-72B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo, litellm_proxy/neulab/NousResearch/Hermes-3-Llama-3.1-405B-Turbo, litellm_proxy/neulab/gemini/gemini-1.5-flash, litellm_proxy/neulab/gemini/gemini-1.5-pro, litellm_proxy/neulab/o1-preview, litellm_proxy/neulab/o1-mini, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-405B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-70B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-8B-Instruct, litellm_proxy/neulab/meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo, litellm_proxy/neulab/meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo, litellm_proxy/neulab/deepseek-chat)
    - `LLM_API_KEY`: Your API key to access the LLM Router for the LLM service
    - `LLM_BASE_URL`: The base URL for the LLM API (i.e. https://llm-proxy.app.all-hands.dev)
+   - `FIREBASE_CONFIG`: (Only for the prototype) An environment variable containing the Firebase configuration details (e.g., API key, project ID, etc.).
 
 
-6. To trigger the workflow, add the 'fix-me' label to any issue you want the AI to attempt to resolve in an Arena setting.
+6. To trigger the workflow, add the 'pr-arena' label to any issue you want the AI to attempt to resolve in an Arena setting.
 
 The workflow will:
 
-- Randomly select two LLMs among given `LLM_MODELS` to  attempt to resolve the issue twice, using the OpenHands resolver and the selected models.
-- (Work-In-Progress) Create two branches that corresponds to each of the attempts.
-- (Work-In-Progress) When the user selects one of them, it automatically creates a Pull Request of the selected model.
-- (Work-In-Progress) Comment on the issue with the results
+- Randomly select two LLMs among given `LLM_MODELS` to  attempt to resolve the issue, using the OpenHands resolver and the selected models respectively.
+- Create and display two `git_patch`s that corresponds to each of the attempts. (Wait until the GitHub action comments on issue with the webpage URL for you arena!)
+- When the user selects one of them, it automatically creates a Pull Request based on the selected model.
+- Comment on the issue with the results.
 
 ## Troubleshooting
 

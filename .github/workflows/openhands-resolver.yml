@@ -113,7 +113,7 @@ jobs:
             const issueNumber = ${{ env.ISSUE_NUMBER }};
             const repo = context.repo.repo
             const owner = context.repo.owner
-            const firebaseWebpageURL = `https://pr-arena.web.app?id=${owner}_${repo}_${issueNumber}`;
+            const firebaseWebpageURL = `https://pr-arena.web.app/${owner}-${repo}-${issueNumber}`;
 
             github.rest.issues.createComment({
                 owner: context.repo.owner,
