@@ -380,8 +380,9 @@ async def process_issue(
     return output
 
 # This function tracks the progress AND write the output to a JSONL file
-async def update_progress(output: Awaitable[ResolverOutput], output_fp: TextIO, pbar: tqdm) -> None:
-    resolved_output = await output
+async def update_progress(output: ResolverOutput, output_fp: TextIO, pbar: tqdm) -> None:
+    # output is now ResolverOutput, not Awaitable[ResolverOutput]
+    resolved_output = output
     pbar.update(1)
     pbar.set_description(f'issue {resolved_output.issue.number}')
     pbar.set_postfix_str(
@@ -725,8 +726,8 @@ def main():
     parser.add_argument(
         "--max-iterations",
         type=int,
-        # default=50,
-        default=1,
+        default=50,
+        # default=1,
         help="Maximum number of iterations to run.",
     )
     parser.add_argument(
