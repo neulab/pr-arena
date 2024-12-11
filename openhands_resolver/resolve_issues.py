@@ -628,14 +628,71 @@ async def resolve_issues(
     logger.info(f"Using {num_workers} workers.")
     
     resolverOutput = None
+try:
+    async def resolve_issues_with_random_models(
+        ...
+    ):
+        try:
+            # Replace the ProcessPoolExecutor with asyncio.gather
+            sem = asyncio.Semaphore(num_workers)
+            tasks = []
+            for issue in issues:
+                # checkout to pr branch
+                if issue_type == "pr":
+                    logger.info(f"Checking out to PR branch {issue.head_branch} for issue {issue.number}")
+                    
+                    subprocess.check_output(
+                        ["git", "checkout", f"{issue.head_branch}"],
+                        cwd=repo_dir,
+                    )
 
-    try:
-        # Replace the ProcessPoolExecutor with asyncio.gather
-        tasks = []
-        for issue in issues:
-            
-            # checkout to pr branch
-            if issue_type == "pr":
+                    base_commit = (
+                        subprocess.check_output(
+                            ["git", "rev-parse", "HEAD"], cwd=repo_dir
+                        )
+                        .decode("utf-8")
+                        .strip()
+                    )
+                
+                async def process_issue_with_semaphore(issue, base_commit, max_iterations, llm_config, output_dir, runtime_container_image, prompt_template, issue_handler, repo_instruction, bool_num_workers):
+                    async with sem:
+                        resolverOutput = await process_issue(
+                            issue,
+                            base_commit,
+                            max_iterations,
+                            llm_config,
+                            output_dir,
+                            runtime_container_image,
+                            prompt_template,
+                            issue_handler,
+                            repo_instruction,
+                            bool_num_workers,
+                        )
+                        await update_progress(
+                            resolverOutput,
+                            output_fp,
+                            pbar,
+                        )
+
+                task = asyncio.create_task(process_issue_with_semaphore(
+                    issue,
+                    base_commit,
+                    max_iterations,
+                    llm_config,
+                    output_dir,
+                    runtime_container_image,
+                    prompt_template,
+                    issue_handler,
+                    repo_instruction,
+                    bool(num_workers > 1),
+                ))
+                tasks.append(task)
+            await asyncio.gather(*tasks)
+        except Exception as e:
+            # handle exception
+            pass
+
+
                 logger.info(f"Checking out to PR branch {issue.head_branch} for issue {issue.number}")
                 
                 subprocess.check_output(
@@ -888,3 +945,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
