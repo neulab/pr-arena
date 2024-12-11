@@ -122,56 +122,56 @@ jobs:
                 body: `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`
             });
       
-      # - name: Wait for user's decision and save it to the GitHub environment
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     LLM_MODELS: ${{ secrets.LLM_MODELS }}
-      #     LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      #     LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-      #     GITHUB_USERNAME: ${{ secrets.PAT_USERNAME }}
-      #     PYTHONPATH: ""
-      #     FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
-      #   run: |
-      #     cd /tmp && python -m openhands_resolver.listen_for_decision \
-      #       --repo ${{ github.repository }} \
-      #       --issue-number ${{ env.ISSUE_NUMBER }}
+      - name: Wait for user's decision and save it to the GitHub environment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          GITHUB_USERNAME: ${{ secrets.PAT_USERNAME }}
+          PYTHONPATH: ""
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
+        run: |
+          cd /tmp && python -m openhands_resolver.listen_for_decision \
+            --repo ${{ github.repository }} \
+            --issue-number ${{ env.ISSUE_NUMBER }}
           
 
-      # - name: Create Pull Request for the selected branch
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-      #     LLM_MODELS: ${{ secrets.LLM_MODELS }}
-      #     LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      #     LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-      #     PYTHONPATH: ""
-      #     SELECTED_MODEL: ${{ env.SELECTED }}
-      #   run: |
-      #     cd /tmp && python -m openhands_resolver.send_pull_request \
-      #       --issue-number ${{ env.ISSUE_NUMBER }} \
-      #       --model-number $SELECTED_MODEL \
-      #       --pr-type draft | tee pr_result${SELECTED_MODEL}.txt && \
-      #       grep "draft created" pr_result${SELECTED_MODEL}.txt | sed 's/.*\///g' > pr_number.txt
+      - name: Create Pull Request for the selected branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+          LLM_MODELS: ${{ secrets.LLM_MODELS }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          PYTHONPATH: ""
+          SELECTED_MODEL: ${{ env.SELECTED }}
+        run: |
+          cd /tmp && python -m openhands_resolver.send_pull_request \
+            --issue-number ${{ env.ISSUE_NUMBER }} \
+            --model-number $SELECTED_MODEL \
+            --pr-type draft | tee pr_result${SELECTED_MODEL}.txt && \
+            grep "draft created" pr_result${SELECTED_MODEL}.txt | sed 's/.*\///g' > pr_number.txt
 
-      # - name: Comment on issue
-      #   uses: actions/github-script@v7
-      #   with:
-      #     github-token: ${{secrets.GITHUB_TOKEN}}
-      #     script: |
-      #       const fs = require('fs');
-      #       const issueNumber = ${{ env.ISSUE_NUMBER }};
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const fs = require('fs');
+            const issueNumber = ${{ env.ISSUE_NUMBER }};
             
-      #       let prNumber = '';
-      #       let branchName = '';
+            let prNumber = '';
+            let branchName = '';
             
-      #       try {
-      #         prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
-      #         } catch (error) {
-      #           console.error('Error reading file:', error);
-      #         }
+            try {
+              prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
+              } catch (error) {
+                console.error('Error reading file:', error);
+              }
             
-      #       github.rest.issues.createComment({
-      #         issue_number: issueNumber,
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
-      #         });
+            github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
+              });
