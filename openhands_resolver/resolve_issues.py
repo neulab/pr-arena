@@ -99,6 +99,7 @@ async def send_to_firebase (
         "repo": repo,
         "issue_number": issue_number
     })
+    output_data1.pop('history', None)
     
     output_data2 = json.loads(resolved_output2.model_dump_json())
     output_data2.update({
@@ -106,6 +107,7 @@ async def send_to_firebase (
         "repo": repo,
         "issue_number": issue_number
     })
+    output_data2.pop('history', None)
     
     output_data = {"json1": output_data1, "json2": output_data2, "status": "pending"}
     
