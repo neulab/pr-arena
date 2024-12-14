@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   auto-fix:
-    if: github.event_name == 'workflow_call' || github.event.label.name == 'pr-arena'
+    if: github.event_name == 'workflow_call' || github.event.label.name == 'commit-url-test'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
