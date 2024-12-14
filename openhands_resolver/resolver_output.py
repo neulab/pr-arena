@@ -1,7 +1,6 @@
-from typing import Any
+from typing import Any, Optional
 from litellm import BaseModel
 from openhands_resolver.github_issue import GithubIssue
-
 
 class ResolverOutput(BaseModel):
     # NOTE: User-specified
@@ -16,3 +15,4 @@ class ResolverOutput(BaseModel):
     comment_success: list[bool] | None
     success_explanation: str
     error: str | None
+    commit_id: Optional[str] = None
