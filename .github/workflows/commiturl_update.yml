@@ -74,7 +74,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install git+https://${{ secrets.PAT_TOKEN }}@github.com/neulab/pr-arena.git@main#subdirectory=openhands_resolver
+          pip install git+https://${{ secrets.PAT_TOKEN }}@github.com/neulab/pr-arena.git@main
           pip install firebase-admin
 
       - name: Attempt to resolve issues and Send the Resolver Output to firebase.
