@@ -106,16 +106,12 @@ jobs:
       # Create commits for both models (if successful) and store their commit hashes in Firebase
       
       - name: Commit changes for model 1
-        if: env.MODEL1_RESOLUTION_SUCCESS == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          LLM_MODELS: ${{ secrets.LLM_MODELS }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
           GITHUB_USERNAME: ${{ secrets.PAT_USERNAME }}
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
-          cd /tmp && python commit_only.py \
+          python commit_only.py \
             --issue-number ${{ env.ISSUE_NUMBER }} \
             --model-number 1 \
             --repo ${{ github.repository }} \
@@ -125,16 +121,12 @@ jobs:
             --firebase-config "${{ secrets.FIREBASE_CONFIG }}"
 
       - name: Commit changes for model 2
-        if: env.MODEL2_RESOLUTION_SUCCESS == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
-          LLM_MODELS: ${{ secrets.LLM_MODELS }}
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
           GITHUB_USERNAME: ${{ secrets.PAT_USERNAME }}
+          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
-          cd /tmp && python commit_only.py \
+          python commit_only.py \
             --issue-number ${{ env.ISSUE_NUMBER }} \
             --model-number 2 \
             --repo ${{ github.repository }} \
@@ -143,6 +135,8 @@ jobs:
             --output-dir output \
             --firebase-config "${{ secrets.FIREBASE_CONFIG }}"
 
+
+  
 
       # Now that both commits are created and their hashes stored in Firebase, post the webpage link
       - name: Post webpage link to GitHub issue comment
