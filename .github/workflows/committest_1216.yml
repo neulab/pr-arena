@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   auto-fix:
-    if: github.event_name == 'workflow_call' || github.event.label.name == 'commit-test'
+    if: github.event_name == 'workflow_call' || github.event.label.name == 'onlycommit'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
