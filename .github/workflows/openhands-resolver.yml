@@ -103,7 +103,6 @@ jobs:
           else
             echo "MODEL2_RESOLUTION_SUCCESS=false" >> $GITHUB_ENV
           fi
-      
 
       - name: Post webpage link to GitHub issue comment
         uses: actions/github-script@v7

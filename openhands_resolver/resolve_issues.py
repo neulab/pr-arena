@@ -44,6 +44,9 @@ from openhands_resolver.utils import (
     reset_logger_for_multiprocessing,
 )
 
+from openhands_resolver.patching import parse_patch, apply_diff
+from openhands_resolver.send_pull_request import initialize_repo, apply_patch, make_commit
+
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 
@@ -92,6 +95,9 @@ async def send_to_firebase (
     
     file_name = f"{owner}_{repo}_{issue_number}.jsonl"
     output_file = pathlib.Path(output_dir) / file_name
+    
+    # TODO: Retrieve commit hash and send it to firesbase as well.
+    # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
     output_data1.update({
@@ -486,6 +492,7 @@ async def resolve_issues_with_random_models(
     if asyncio.iscoroutine(resolverOutput2):
         logger.info(f"{resolverOutput2} is coroutine.")
     
+    # TODO: Send commit hash to the firebase.
     await send_to_firebase (
         resolved_output1=resolverOutput1,
         resolved_output2=resolverOutput2,
