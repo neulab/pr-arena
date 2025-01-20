@@ -16,3 +16,5 @@ class ResolverOutput(BaseModel):
     success_explanation: str
     error: str | None
     commit_id: Optional[str] = None
+    commit_hash: Optional[str] = None
+    repo_dir: Optional[str] = None

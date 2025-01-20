@@ -55,6 +55,33 @@ from firebase_admin import credentials, firestore, initialize_app
 AGENT_CLASS = "CodeActAgent"
 
 
+def get_new_commit_hash(output_dir, resolver_output: ResolverOutput) -> None:
+    # 1) initialize_repo
+    patched_repo_dir = initialize_repo(
+        output_dir=output_dir,
+        issue_number=resolver_output.issue.number,
+        issue_type=resolver_output.issue_type,
+        base_commit=resolver_output.base_commit,
+    )
+
+    # 2) apply_patch
+    apply_patch(patched_repo_dir, resolver_output.git_patch)
+
+    # 3) make_commit
+    make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
+
+    # 4) Retrieve commit hash
+    rev_parse_cmd = f'git -C "{patched_repo_dir}" rev-parse HEAD'
+    result = subprocess.run(rev_parse_cmd, shell=True, capture_output=True, text=True)
+    new_hash = result.stdout.strip()
+
+    # Assign it back to the resolver_output
+    resolver_output.commit_hash = new_hash
+    resolver_output.repo_dir = patched_repo_dir
+
+    return
+
+
 def cleanup():
     print("Cleaning up child processes...")
     for process in mp.active_children():
@@ -96,8 +123,10 @@ async def send_to_firebase (
     file_name = f"{owner}_{repo}_{issue_number}.jsonl"
     output_file = pathlib.Path(output_dir) / file_name
     
-    # TODO: Retrieve commit hash and send it to firesbase as well.
+    # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
     # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
+    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output1)
+    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output2)
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
     output_data1.update({
