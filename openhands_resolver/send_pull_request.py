@@ -13,6 +13,7 @@ import shlex
 import json
 
 from openhands_resolver.resolver_output import ResolverOutput
+from typing import cast
 
 
 def apply_patch(repo_dir: str, patch: str) -> None:
@@ -340,53 +341,58 @@ def process_single_issue(
     #         f"Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation."
     #     )
     #     return
-    #
-    # [PR-Arena] issue_type is always "issue"
 
     issue_type = resolver_output.issue_type
 
-    if issue_type == "issue":
-        patched_repo_dir = initialize_repo(
-            output_dir, 
-            resolver_output.issue.number, 
-            issue_type, 
-            resolver_output.base_commit
-        )
-    elif issue_type == "pr":
-        patched_repo_dir = initialize_repo(
-            output_dir, 
-            resolver_output.issue.number, 
-            issue_type, 
-            resolver_output.issue.head_branch
-        )
-    else:
+    # [PR-Arena] issue_type is always "issue"
+    if issue_type != "issue":
         raise ValueError(f"Invalid issue type: {issue_type}")
 
+    # [PR-Arena] Get rid of these 3 functions (Moved to resolve_issues.py), and somehow get the "patched_repo_dir" from somewhere.
+    # if issue_type == "issue":
+    #     patched_repo_dir = initialize_repo(
+    #         output_dir, 
+    #         resolver_output.issue.number, 
+    #         issue_type, 
+    #         resolver_output.base_commit
+    #     )
+    # else:
+    #     raise ValueError(f"Invalid issue type: {issue_type}")
 
+    # apply_patch(patched_repo_dir, resolver_output.git_patch)
+
+    # make_commit(patched_repo_dir, resolver_output.issue, issue_type)
     
+    patched_repo_dir = resolver_output.repo_dir
 
-    apply_patch(patched_repo_dir, resolver_output.git_patch)
-
-    make_commit(patched_repo_dir, resolver_output.issue, issue_type)
-
-    if issue_type == "pr":
-        update_existing_pull_request(
+    # [PR-Arena] issue_type is always "issue"
+    send_pull_request(
             github_issue=resolver_output.issue,
             github_token=github_token,
             github_username=github_username,
-            patch_dir=patched_repo_dir,
-            additional_message=resolver_output.success_explanation
-        )
-    else:
-        send_pull_request(
-            github_issue=resolver_output.issue,
-            github_token=github_token,
-            github_username=github_username,
-            patch_dir=patched_repo_dir,
+            patch_dir=cast(str, patched_repo_dir),
             pr_type=pr_type,
             fork_owner=fork_owner,
             additional_message=resolver_output.success_explanation,
-        )
+    )
+    # if issue_type == "pr":
+    #     update_existing_pull_request(
+    #         github_issue=resolver_output.issue,
+    #         github_token=github_token,
+    #         github_username=github_username,
+    #         patch_dir=patched_repo_dir,
+    #         additional_message=resolver_output.success_explanation
+    #     )
+    # else:
+    #     send_pull_request(
+    #         github_issue=resolver_output.issue,
+    #         github_token=github_token,
+    #         github_username=github_username,
+    #         patch_dir=patched_repo_dir,
+    #         pr_type=pr_type,
+    #         fork_owner=fork_owner,
+    #         additional_message=resolver_output.success_explanation,
+    #     )
 
 
 def process_all_successful_issues(
@@ -481,6 +487,7 @@ def main():
     if not os.path.exists(my_args.output_dir):
         raise ValueError(f"Output directory {my_args.output_dir} does not exist.")
 
+    # [PR-Arena] Issue Number would always be a single number, so the 'if' statement isn't necessary.
     if my_args.issue_number == "all_successful":
         process_all_successful_issues(
             my_args.output_dir,
