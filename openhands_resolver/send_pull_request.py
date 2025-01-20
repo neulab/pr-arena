@@ -340,6 +340,8 @@ def process_single_issue(
     #         f"Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation."
     #     )
     #     return
+    #
+    # [PR-Arena] issue_type is always "issue"
 
     issue_type = resolver_output.issue_type
 
