@@ -664,41 +664,133 @@ def test_process_single_issue_unsuccessful(
 
     # Call the function
     process_single_issue(
-        mock_output_dir, resolver_output, github_token, github_username, pr_type, None, False
+        resolver_output,
+        github_token,
+        github_username,
+        pr_type,
+        mock_output_dir,
     )
 
-    # Assert that none of the mocked functions were called
+    # Assertions
     mock_initialize_repo.assert_not_called()
     mock_apply_patch.assert_not_called()
     mock_make_commit.assert_not_called()
     mock_send_pull_request.assert_not_called()
 
 
-@patch("openhands_resolver.send_pull_request.load_all_resolver_outputs")
-@patch("openhands_resolver.send_pull_request.process_single_issue")
+@patch("openhands_resolver.send_pull_request.initialize_repo")
+@patch("openhands_resolver.send_pull_request.apply_patch")
+@patch("openhands_resolver.send_pull_request.send_pull_request")
+@patch("openhands_resolver.send_pull_request.make_commit")
 def test_process_all_successful_issues(
-    mock_process_single_issue, mock_load_all_resolver_outputs
+    mock_make_commit,
+    mock_send_pull_request,
+    mock_apply_patch,
+    mock_initialize_repo,
+    mock_output_dir,
 ):
-    # Create ResolverOutput objects with properly initialized GithubIssue instances
-    resolver_output_1 = ResolverOutput(
-        issue=GithubIssue(
-            owner="test-owner",
-            repo="test-repo",
-            number=1,
-            title="Issue 1",
-            body="Body 1",
-        ),
-        issue_type="issue",
-        instruction="Test instruction 1",
-        base_commit="def456",
-        git_patch="Test patch 1",
-        history=[],
-        metrics={},
-        success=True,
-        comment_success=None,
-        success_explanation="Test success 1",
-        error=None,
+    # Initialize test data
+    github_token = "test_token"
+    github_username = "test_user"
+    pr_type = "draft"
+
+    resolver_outputs = [
+        ResolverOutput(
+            issue=GithubIssue(
+                owner="test-owner",
+                repo="test-repo",
+                number=i,
+                title=f"Issue {i}",
+                body=f"Body {i}",
+            ),
+            issue_type="issue",
+            instruction=f"Test instruction {i}",
+            base_commit="def456",
+            git_patch=f"Test patch {i}",
+            history=[],
+            metrics={},
+            success=True,
+            comment_success=None,
+            success_explanation="",
+            error="",
+        )
+        for i in range(1, 4)
+    ]
+
+    # Call the function
+    process_all_successful_issues(
+        resolver_outputs,
+        github_token,
+        github_username,
+        pr_type,
+        mock_output_dir,
     )
+
+    # Assertions
+    mock_initialize_repo.assert_called_once()
+    mock_apply_patch.assert_called()
+    mock_make_commit.assert_called()
+    mock_send_pull_request.assert_called()
+
+
+@patch("openhands_resolver.send_pull_request.initialize_repo")
+@patch("openhands_resolver.send_pull_request.apply_patch")
+@patch("openhands_resolver.send_pull_request.send_pull_request")
+@patch("openhands_resolver.send_pull_request.make_commit")
+def test_main(
+    mock_make_commit,
+    mock_send_pull_request,
+    mock_apply_patch,
+    mock_initialize_repo,
+    mock_output_dir,
+):
+    # Initialize test data
+    github_token = "test_token"
+    github_username = "test_user"
+    pr_type = "draft"
+
+    resolver_outputs = [
+        ResolverOutput(
+            issue=GithubIssue(
+                owner="test-owner",
+                repo="test-repo",
+                number=i,
+                title=f"Issue {i}",
+                body=f"Body {i}",
+            ),
+            issue_type="issue",
+            instruction=f"Test instruction {i}",
+            base_commit="def456",
+            git_patch=f"Test patch {i}",
+            history=[],
+            metrics={},
+            success=True,
+            comment_success=None,
+            success_explanation="",
+            error="",
+        )
+        for i in range(1, 4)
+    ]
+
+    # Call the function
+    main(
+        resolver_outputs,
+        github_token,
+        github_username,
+        pr_type,
+        mock_output_dir,
+    )
+
+    # Assertions
+    mock_initialize_repo.assert_called_once()
+    mock_apply_patch.assert_called()
+    mock_make_commit.assert_called()
+    mock_send_pull_request.assert_called()
+
+    mock_apply_patch.assert_called()
+    mock_make_commit.assert_called()
+    mock_send_pull_request.assert_called()
+
 
     resolver_output_2 = ResolverOutput(
         issue=GithubIssue(
@@ -916,3 +1008,6 @@ def test_make_commit_escapes_issue_title(mock_subprocess_run):
     expected_commit_message = "Fix issue #42: 'Issue with \"quotes\" and $pecial characters'"
     shlex_quote_message = shlex.quote(expected_commit_message)
     assert f"git -C {repo_dir} commit -m {shlex_quote_message}" in git_commit_call
+
+
+
