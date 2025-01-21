@@ -55,7 +55,7 @@ from firebase_admin import credentials, firestore, initialize_app
 AGENT_CLASS = "CodeActAgent"
 
 
-def get_new_commit_hash(output_dir, resolver_output: ResolverOutput) -> None:
+def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, new_branch_suffix: str) -> None:
     # 1) initialize_repo
     patched_repo_dir = initialize_repo(
         output_dir=output_dir,
@@ -67,10 +67,14 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput) -> None:
     # 2) apply_patch
     apply_patch(patched_repo_dir, resolver_output.git_patch)
 
-    # 3) make_commit
+    # 3) Create a new branch and switch to it
+    new_branch_name = f"fix-issue-{resolver_output.issue.number}-{new_branch_suffix}"
+    subprocess.run(f'git -C "{patched_repo_dir}" checkout -b {new_branch_name}', shell=True, check=True)
+
+    # 4) make_commit
     make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
 
-    # 4) Retrieve commit hash
+    # 5) Retrieve commit hash
     rev_parse_cmd = f'git -C "{patched_repo_dir}" rev-parse HEAD'
     result = subprocess.run(rev_parse_cmd, shell=True, capture_output=True, text=True)
     new_hash = result.stdout.strip()
@@ -125,8 +129,8 @@ async def send_to_firebase (
     
     # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
     # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
-    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output1)
-    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output2)
+    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output1, new_branch_suffix="model1")
+    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output2, new_branch_suffix="model2")
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
     output_data1.update({
