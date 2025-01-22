@@ -227,7 +227,7 @@ async def send_to_firebase (
         resolver_output=resolved_output1,
         github_token=token,
         github_username=username,
-        pr_type=str
+        pr_type=pr_type
     
     )
     get_new_commit_hash(
@@ -235,7 +235,7 @@ async def send_to_firebase (
         resolver_output=resolved_output2,
         github_token=token,
         github_username=username,
-        pr_type=str
+        pr_type=pr_type
     )
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
