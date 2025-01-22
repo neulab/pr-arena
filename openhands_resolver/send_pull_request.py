@@ -414,15 +414,15 @@ def process_single_issue(
     # make_commit(patched_repo_dir, resolver_output.issue, issue_type)
 
     create_pull_request(
-            github_issue=resolver_output.issue,
-            branch_name=cast(str, resolver_output.branch_name),
-            default_branch=cast(str, resolver_output.default_branch),
-            base_url=cast(str, resolver_output.base_url),
-            headers=cast(dict, resolver_output.headers),
-            push_owner=fork_owner if fork_owner else resolver_output.issue.owner,
-            commit_hash=cast(str, resolver_output.commit_hash),
-            pr_type=pr_type,
-            additional_message=resolver_output.success_explanation
+        github_issue=resolver_output.issue,
+        branch_name=cast(str, resolver_output.branch_name),
+        default_branch=cast(str, resolver_output.default_branch),
+        base_url=cast(str, resolver_output.base_url),
+        headers=cast(dict, resolver_output.headers),
+        push_owner=fork_owner if fork_owner else resolver_output.issue.owner,
+        commit_hash=cast(str, resolver_output.commit_hash),
+        pr_type=pr_type,
+        additional_message=resolver_output.success_explanation
     )
     # [PR-Arena] issue_type is always "issue"
     # if issue_type == "pr":
