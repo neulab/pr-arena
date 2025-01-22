@@ -222,8 +222,21 @@ async def send_to_firebase (
     
     # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
     # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
-    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output1)
-    get_new_commit_hash(output_dir=output_dir, resolver_output=resolved_output2)
+    get_new_commit_hash(
+        output_dir=output_dir,
+        resolver_output=resolved_output1,
+        github_token=token,
+        github_username=username,
+        pr_type=str
+    
+    )
+    get_new_commit_hash(
+        output_dir=output_dir,
+        resolver_output=resolved_output2,
+        github_token=token,
+        github_username=username,
+        pr_type=str
+    )
     
     output_data1 = json.loads(resolved_output1.model_dump_json())
     output_data1.update({
