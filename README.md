@@ -38,7 +38,7 @@ The workflow will:
 - Create and display two `git_patch`s that corresponds to each of the attempts. (Wait until the GitHub action comments on issue with the webpage URL for you arena!)
 - When the user selects one of them, it automatically creates a Pull Request based on the selected model.
 - Comment on the issue with the results.
-Good Luck!
+
 ## Troubleshooting
 
 This project is an extension of [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver). If you have any issues, please open an issue on this github repo, we're happy to help!
