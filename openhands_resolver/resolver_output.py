@@ -18,3 +18,7 @@ class ResolverOutput(BaseModel):
     commit_id: Optional[str] = None
     commit_hash: Optional[str] = None
     repo_dir: Optional[str] = None
+    branch_name: Optional[str] = None
+    default_branch: Optional[str] = None
+    base_url: Optional[str] = None
+    headers: Optional[dict] = None

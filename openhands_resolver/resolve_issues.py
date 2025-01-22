@@ -8,13 +8,17 @@ import argparse
 import multiprocessing as mp
 import os
 import pathlib
+import requests
 import subprocess
 import json
 import random
+import shlex
 
 from termcolor import colored
 from tqdm import tqdm
 
+
+from typing import cast, Optional
 
 from openhands_resolver.github_issue import GithubIssue
 from openhands_resolver.issue_definitions import ( 
@@ -45,7 +49,7 @@ from openhands_resolver.utils import (
 )
 
 from openhands_resolver.patching import parse_patch, apply_diff
-from openhands_resolver.send_pull_request import initialize_repo, apply_patch, make_commit
+from openhands_resolver.send_pull_request import initialize_repo, apply_patch, make_commit, branch_exists
 
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
@@ -55,7 +59,83 @@ from firebase_admin import credentials, firestore, initialize_app
 AGENT_CLASS = "CodeActAgent"
 
 
-def get_new_commit_hash(output_dir, resolver_output: ResolverOutput) -> None:
+def prepare_branch_and_push(
+    github_issue: GithubIssue,
+    github_token: str,
+    github_username: Optional[str],
+    patch_dir: str,
+    pr_type: str,
+) -> tuple[str, str, str, dict]:
+    """
+    1) Validates pr_type.
+    2) Sets up API headers, base_url.
+    3) Generates a unique branch name.
+    4) Gets the repository's default branch.
+    5) Creates & checks out a new local branch.
+    6) Pushes the new branch to GitHub.
+    7) Returns the data needed for creating a PR (branch name, default branch, base_url, etc.)
+       plus the commit hash of HEAD.
+    """
+
+    if pr_type not in ["branch", "draft", "ready"]:
+        raise ValueError(f"Invalid pr_type: {pr_type}")
+
+    # Prepare GitHub API details
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    base_url = f"https://api.github.com/repos/{github_issue.owner}/{github_issue.repo}"
+
+    # Create a new branch name
+    base_branch_name = f"openhands-fix-issue-{github_issue.number}"
+    branch_name = base_branch_name
+    attempt = 1
+
+    # Ensure the branch doesn't already exist on the remote
+    while branch_exists(base_url, branch_name, headers):
+        attempt += 1
+        branch_name = f"{base_branch_name}-try{attempt}"
+
+    # Get the default branch
+    response = requests.get(base_url, headers=headers)
+    response.raise_for_status()
+    default_branch = response.json()["default_branch"]
+
+    # Create and checkout the new branch locally
+    result = subprocess.run(
+        f"git -C {shlex.quote(patch_dir)} checkout -b {shlex.quote(branch_name)}",
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"Error creating new branch: {result.stderr}")
+        raise RuntimeError(f"Failed to create a new branch {branch_name} in {patch_dir}.")
+
+    # Determine the repository to push to
+    push_owner = github_issue.owner
+    push_repo = github_issue.repo
+
+    # Construct push command
+    username_and_token = (
+        f"{github_username}:{github_token}"
+        if github_username else
+        f"x-auth-token:{github_token}"
+    )
+    push_command = (
+        f"git -C {shlex.quote(patch_dir)} push "
+        f"https://{username_and_token}@github.com/"
+        f"{push_owner}/{push_repo}.git {shlex.quote(branch_name)}"
+    )
+    result = subprocess.run(push_command, shell=True, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Error pushing changes\n{push_command}\n{result.stderr}")
+        raise RuntimeError("Failed to push changes to the remote repository")
+
+    return branch_name, default_branch, base_url, headers
+
+def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, github_token: str, github_username: str, pr_type: str) -> None:
     # 1) initialize_repo
     patched_repo_dir = initialize_repo(
         output_dir=output_dir,
@@ -69,13 +149,27 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput) -> None:
 
     # 3) make_commit
     make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
+    
+    # 4) branch checkout and push
+    branch_name, default_branch, base_url, headers = prepare_branch_and_push(
+        github_issue=resolver_output.issue,
+        github_token=github_token,
+        github_username=github_username,
+        patch_dir=patched_repo_dir,
+        pr_type=pr_type,
+    )
+    
+    resolver_output.branch_name = branch_name
+    resolver_output.default_branch = default_branch
+    resolver_output.base_url = base_url
+    resolver_output.headers = headers
 
-    # 4) Retrieve commit hash
+    # 5) Retrieve commit hash
     rev_parse_cmd = f'git -C "{patched_repo_dir}" rev-parse HEAD'
     result = subprocess.run(rev_parse_cmd, shell=True, capture_output=True, text=True)
     new_hash = result.stdout.strip()
 
-    # Assign it back to the resolver_output
+    # 6) Assign it back to the resolver_output
     resolver_output.commit_hash = new_hash
     resolver_output.repo_dir = patched_repo_dir
 
@@ -105,6 +199,9 @@ async def send_to_firebase (
     repo: str,
     issue_number: int,
     firebase_config: dict,
+    token: str,
+    username: str,
+    pr_type: str,
 ) -> None:
     """
     Send the resolver output to Firebase Firestore.
@@ -529,7 +626,10 @@ async def resolve_issues_with_random_models(
         owner=owner,
         repo=repo,
         issue_number=issue_number,
-        firebase_config=firebase_config
+        firebase_config=firebase_config,
+        token=token,
+        username=username,
+        pr_type="draft"
     )
 
 async def resolve_issues(
