@@ -542,17 +542,17 @@ def test_load_firebase_config():
 
     # Test invalid JSON
     invalid_json = '{invalid_json}'
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Invalid Firebase configuration JSON"):
         load_firebase_config(invalid_json)
 
     # Test empty JSON
     empty_json = '{}'
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Empty Firebase configuration"):
         load_firebase_config(empty_json)
 
     # Test missing required fields
     missing_fields_json = '{"apiKey": "test_key"}'
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Missing required fields in Firebase configuration"):
         load_firebase_config(missing_fields_json)
 
 if __name__ == "__main__":
