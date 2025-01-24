@@ -187,7 +187,14 @@ def cleanup():
 def load_firebase_config(config_json: str) -> dict:
     """Load Firebase configuration from JSON string."""
     try:
-        return json.loads(config_json)
+        config = json.loads(config_json)
+        if not config:
+            raise ValueError("Empty Firebase configuration")
+        required_fields = ["apiKey", "authDomain"]
+        missing_fields = [field for field in required_fields if field not in config]
+        if missing_fields:
+            raise ValueError(f"Missing required fields in Firebase configuration: {', '.join(missing_fields)}")
+        return config
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid Firebase configuration JSON: {e}")
 

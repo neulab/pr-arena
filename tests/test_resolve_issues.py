@@ -1,8 +1,7 @@
 import os
 import tempfile
 import pytest
-
-
+import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from openhands_resolver.issue_definitions import IssueHandler, PRHandler
 from openhands_resolver.resolve_issues import (
@@ -10,6 +9,7 @@ from openhands_resolver.resolve_issues import (
     initialize_runtime,
     complete_runtime,
     process_issue,
+    load_firebase_config,
 )
 from openhands_resolver.github_issue import GithubIssue
 from openhands.events.action import CmdRunAction
@@ -107,6 +107,7 @@ def test_initialize_runtime():
     mock_runtime.run_action.assert_any_call(
         CmdRunAction(command='git config --global core.pager ""')
     )
+    # Add any additional assertions if needed based on the current implementation
 
 
 def test_download_issues_from_github():
@@ -245,10 +246,13 @@ async def test_complete_runtime():
             exit_code=0,
             content="",
             command_id=4,
-            command='git diff base_commit_hash fix',
+            command='git add -A',
         ),
         create_cmd_output(
-            exit_code=0, content="git diff content", command_id=5, command="git apply"
+            exit_code=0,
+            content="git diff content",
+            command_id=5,
+            command='git diff --no-color --cached base_commit_hash',
         ),
     ]
 
@@ -256,6 +260,7 @@ async def test_complete_runtime():
 
     assert result == {"git_patch": "git diff content"}
     assert mock_runtime.run_action.call_count == 5
+    # Add any additional assertions if needed based on the current implementation
 
 
 @pytest.mark.asyncio
@@ -266,7 +271,6 @@ async def test_process_issue(mock_output_dir, mock_prompt_template):
     mock_run_controller = AsyncMock()
     mock_complete_runtime = AsyncMock()
     handler_instance = MagicMock()
-
 
     # Set up test data
     issue = GithubIssue(
@@ -293,8 +297,8 @@ async def test_process_issue(mock_output_dir, mock_prompt_template):
     )
     mock_complete_runtime.return_value = {"git_patch": "test patch"}
     handler_instance.guess_success.return_value = (True, None, "Issue resolved successfully")
-    handler_instance.get_instruction.return_value = "Test instruction"  
-    handler_instance.issue_type = "issue"  
+    handler_instance.get_instruction.return_value = "Test instruction"
+    handler_instance.issue_type = "issue"
 
     with patch(
         "openhands_resolver.resolve_issues.create_runtime", mock_create_runtime
@@ -306,40 +310,43 @@ async def test_process_issue(mock_output_dir, mock_prompt_template):
         "openhands_resolver.resolve_issues.complete_runtime", mock_complete_runtime
     ), patch(
         "openhands_resolver.resolve_issues.logger"
+    ), patch(
+        "openhands_resolver.resolve_issues.subprocess.check_output",
+        return_value=b"test_commit_hash\n"
     ):
+        # Call the function
+        result = await process_issue(
+            issue,
+            base_commit,
+            max_iterations,
+            llm_config,
+            mock_output_dir,
+            runtime_container_image,
+            mock_prompt_template,
+            handler_instance,
+            repo_instruction,
+            reset_logger=False
+        )
 
-            # Call the function
-            result = await process_issue(
-                issue,
-                base_commit,
-                max_iterations,
-                llm_config,
-                mock_output_dir,
-                runtime_container_image,
-                mock_prompt_template,
-                handler_instance,
-                repo_instruction,
-                reset_logger=False
-            )
+        # Assert the result
+        assert handler_instance.issue_type == "issue"
+        assert isinstance(result, ResolverOutput)
+        assert result.issue == issue
+        assert result.base_commit == base_commit
+        assert result.git_patch == "test patch"
+        assert result.success
+        assert result.success_explanation == "Issue resolved successfully"
+        assert result.error is None
+        assert result.commit_id == "test_commit_hash"
 
-            # Assert the result
-            assert handler_instance.issue_type == "issue"
-            assert isinstance(result, ResolverOutput)
-            assert result.issue == issue
-            assert result.base_commit == base_commit
-            assert result.git_patch == "test patch"
-            assert result.success
-            assert result.success_explanation == "Issue resolved successfully"
-            assert result.error is None
+        # Assert that the mocked functions were called
+        mock_create_runtime.assert_called_once()
+        mock_initialize_runtime.assert_called_once()
+        mock_run_controller.assert_called_once()
+        mock_complete_runtime.assert_called_once()
 
-            # Assert that the mocked functions were called
-            mock_create_runtime.assert_called_once()
-            mock_initialize_runtime.assert_called_once()
-            mock_run_controller.assert_called_once()
-            mock_complete_runtime.assert_called_once()
-
-            # Assert that the guess_success was called correctly
-            handler_instance.guess_success.assert_called_once()
+        # Assert that the guess_success was called correctly
+        handler_instance.guess_success.assert_called_once()
 
 
 
@@ -533,6 +540,27 @@ def test_guess_success_invalid_output():
         assert not success
         assert explanation == "Failed to decode answer from LLM response: This is not a valid output"
 
+
+def test_load_firebase_config():
+    # Test valid JSON
+    valid_json = '{"apiKey": "test_key", "authDomain": "test.firebaseapp.com"}'
+    config = load_firebase_config(valid_json)
+    assert config == {"apiKey": "test_key", "authDomain": "test.firebaseapp.com"}
+
+    # Test invalid JSON
+    invalid_json = '{invalid_json}'
+    with pytest.raises(ValueError, match="Invalid Firebase configuration JSON"):
+        load_firebase_config(invalid_json)
+
+    # Test empty JSON
+    empty_json = '{}'
+    with pytest.raises(ValueError, match="Empty Firebase configuration"):
+        load_firebase_config(empty_json)
+
+    # Test missing required fields
+    missing_fields_json = '{"apiKey": "test_key"}'
+    with pytest.raises(ValueError, match="Missing required fields in Firebase configuration"):
+        load_firebase_config(missing_fields_json)
 
 if __name__ == "__main__":
     pytest.main()
