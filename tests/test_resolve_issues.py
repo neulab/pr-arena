@@ -1,8 +1,7 @@
 import os
 import tempfile
 import pytest
-
-
+import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from openhands_resolver.issue_definitions import IssueHandler, PRHandler
 from openhands_resolver.resolve_issues import (
@@ -10,6 +9,7 @@ from openhands_resolver.resolve_issues import (
     initialize_runtime,
     complete_runtime,
     process_issue,
+    load_firebase_config,
 )
 from openhands_resolver.github_issue import GithubIssue
 from openhands.events.action import CmdRunAction
@@ -533,6 +533,27 @@ def test_guess_success_invalid_output():
         assert not success
         assert explanation == "Failed to decode answer from LLM response: This is not a valid output"
 
+
+def test_load_firebase_config():
+    # Test valid JSON
+    valid_json = '{"apiKey": "test_key", "authDomain": "test.firebaseapp.com"}'
+    config = load_firebase_config(valid_json)
+    assert config == {"apiKey": "test_key", "authDomain": "test.firebaseapp.com"}
+
+    # Test invalid JSON
+    invalid_json = '{invalid_json}'
+    with pytest.raises(ValueError):
+        load_firebase_config(invalid_json)
+
+    # Test empty JSON
+    empty_json = '{}'
+    with pytest.raises(ValueError):
+        load_firebase_config(empty_json)
+
+    # Test missing required fields
+    missing_fields_json = '{"apiKey": "test_key"}'
+    with pytest.raises(ValueError):
+        load_firebase_config(missing_fields_json)
 
 if __name__ == "__main__":
     pytest.main()
