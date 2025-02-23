@@ -220,7 +220,7 @@ async def send_to_firebase (
         issue_number (int): Issue number.
         firebase_config (dict): Firebase configuration.
     """
-    logger.info(f"2. Write down the resolver to {output_dir}/... .")
+    # logger.info(f"2. Write down the resolver to {output_dir}/... .")
     
     pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
     
@@ -263,22 +263,22 @@ async def send_to_firebase (
     
     output_data = {"json1": output_data1, "json2": output_data2, "status": "pending"}
     
-    logger.info(f"2.1. Resolvers: {output_data}")
+    # logger.info(f"2.1. Resolvers: {output_data}")
     
     with open(output_file, "a") as output_fp:
         output_fp.write(json.dumps(output_data) + "\n")
     
-    logger.info("3. Sending jsonl file to firebase.")
+    # logger.info("3. Sending jsonl file to firebase.")
     
     cred = credentials.Certificate(firebase_config)
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     
-    logger.info("3.1. Credentials complete")
+    # logger.info("3.1. Credentials complete")
     # Initialize Firestore client
     db = firestore.client()
     
-    logger.info("3.2. Database complete")
+    # logger.info("3.2. Database complete")
     
     collection_name = "issues"
     document_id = f"{owner}-{repo}-{issue_number}"
@@ -591,10 +591,10 @@ async def resolve_issues_with_random_models(
     """Randomly select two LLM models and call resolve_issues for each."""
     
     selected_llms = random.sample(llm_configs, 2)
-    logger.info(f"Selected LLM models: {selected_llms[0]} and {selected_llms[1]}")
+    # logger.info(f"Selected LLM models: {selected_llms[0]} and {selected_llms[1]}")
 
     llm_config = selected_llms[0]
-    logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
+    # logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
     resolverOutput1 = await resolve_issues(
         owner,
         repo,
@@ -614,7 +614,7 @@ async def resolve_issues_with_random_models(
     )
 
     llm_config = selected_llms[1]
-    logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
+    # logger.info(f"Resolving issues using {llm_config.model.split("/")[-1]}: {llm_config}")
     resolverOutput2 = await resolve_issues(
         owner,
         repo,
@@ -1006,7 +1006,7 @@ def main():
     
     raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
-    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    # logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     issue_number = issue_numbers[0]
     

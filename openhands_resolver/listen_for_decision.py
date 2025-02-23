@@ -56,7 +56,7 @@ async def get_selected_model_number (document_id: str, firebase_config: dict):
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
     
-    logger.info("3.1. Credentials complete")
+    # logger.info("3.1. Credentials complete")
     db = firestore.client()
     
     doc_ref = db.collection("issues").document(document_id)
@@ -82,12 +82,12 @@ async def get_selected_model_number (document_id: str, firebase_config: dict):
                 with open(github_env_path, "a") as env_file:
                     env_file.write(f"SELECTED={selected}\n")
                 logger.info(f"Model #{selected} is selected and saved to GitHub environment {github_env_path}.")
-                logger.info("Setting event to stop asyncio loop.")
+                # logger.info("Setting event to stop asyncio loop.")
                 loop.call_soon_threadsafe(event.set)
-                logger.info("Event set.")
+                # logger.info("Event set.")
                 break
         
-        logger.info("Returning on_snapshot.")
+        # logger.info("Returning on_snapshot.")
         return
 
     # Attach the listener
@@ -97,10 +97,10 @@ async def get_selected_model_number (document_id: str, firebase_config: dict):
     # Keep the listener alive
     try:
         await event.wait()
-        logger.info("Event completed.")
+        # logger.info("Event completed.")
     finally:
         doc_watch.unsubscribe()
-        logger.info("Stopped listening for changes.")
+        # logger.info("Stopped listening for changes.")
 
 def load_firebase_config(config_json: str) -> dict:
     """Load Firebase configuration from JSON string."""
@@ -173,7 +173,7 @@ def main():
     
     raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
-    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    # logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     asyncio.run(get_selected_model_number (document_id=f"{owner}-{repo}-{int(my_args.issue_number)}", firebase_config=firebase_config))
     
