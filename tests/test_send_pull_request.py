@@ -44,7 +44,7 @@ def mock_github_issue():
     )
 
 def test_load_single_resolver_output():
-    mock_output_jsonl = "tests/mock_output/output.jsonl"
+    mock_output_jsonl = "tests/mock_output/output1.jsonl"
 
     # Test loading an existing issue
     resolver_output = load_single_resolver_output(mock_output_jsonl, 5)
@@ -871,7 +871,7 @@ def test_main(mock_getenv, mock_path_exists, mock_load_single_resolver_output,
     mock_parser.assert_called_once()
     mock_getenv.assert_any_call('GITHUB_TOKEN')
     mock_path_exists.assert_called_with('/mock/output')
-    mock_load_single_resolver_output.assert_called_with('/mock/output/output.jsonl', 42)
+    mock_load_single_resolver_output.assert_called_with('/mock/output/output1.jsonl', 42)
     mock_process_single_issue.assert_called_with(
         '/mock/output', mock_resolver_output, 'mock_token', None, 'draft', None, False
     )
