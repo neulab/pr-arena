@@ -162,9 +162,9 @@ def main():
         help="Type of issue to resolve, either open issue or pr comments.",
     )
     parser.add_argument(
-    "--firebase-config",
-    type=str,
-    help="Firebase configuration in JSON format."
+        "--firebase-config",
+        type=str,
+        help="Firebase configuration in JSON format."
     )
 
     my_args = parser.parse_args()

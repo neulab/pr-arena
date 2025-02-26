@@ -471,7 +471,7 @@ def process_all_successful_issues(
 def main():
     parser = argparse.ArgumentParser(description="Send a pull request to Github.")
     parser.add_argument(
-        "--github-token",
+        "--token",
         type=str,
         default=None,
         help="Github token to access the repository.",
@@ -521,7 +521,7 @@ def main():
     my_args = parser.parse_args()
 
     github_token = (
-        my_args.github_token if my_args.github_token else os.getenv("GITHUB_TOKEN")
+        my_args.token if my_args.token else os.getenv("GITHUB_TOKEN")
     )
     if not github_token:
         raise ValueError(
