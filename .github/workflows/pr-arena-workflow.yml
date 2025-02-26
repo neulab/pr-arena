@@ -78,7 +78,7 @@ jobs:
         run: |
           cd /tmp && python -m openhands_resolver.resolve_issues \
             --repo ${{ github.repository }} \
-            --issue-numbers ${{ env.ISSUE_NUMBER }}
+            --issue-numbers ${{ env.ISSUE_NUMBER }} \
             --token ${{ inputs.pat_token }} \
             --llm-models ${{ inputs.llm_models }} \
             --llm-api-key ${{ env.LLM_API_KEY }} \
