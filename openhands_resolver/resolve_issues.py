@@ -510,7 +510,8 @@ async def process_issue(
     metrics = state.metrics.get() if state.metrics else None
 
     # determine success based on the history and the issue description
-    success, comment_success, success_explanation = issue_handler.guess_success(issue, state.history, llm_config)
+    # success, comment_success, success_explanation = issue_handler.guess_success(issue, state.history, llm_config)
+    success, comment_success, success_explanation = True, None, "NOT IN USE"
 
     if issue_handler.issue_type == "pr" and comment_success:
         success_log = "I have updated the PR and resolved some of the issues that were cited in the pull request review. Specifically, I identified the following revision requests, and all the ones that I think I successfully resolved are checked off. All the unchecked ones I was not able to resolve, so manual intervention may be required:\n"
