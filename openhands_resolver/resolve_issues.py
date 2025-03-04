@@ -144,21 +144,27 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, github_toke
         base_commit=resolver_output.base_commit,
     )
 
-    # 2) apply_patch
-    apply_patch(patched_repo_dir, resolver_output.git_patch)
-
-    # 3) make_commit
-    logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
-    make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
+    branch_name, default_branch, base_url, headers = None, None, None, None
     
-    # 4) branch checkout and push
-    branch_name, default_branch, base_url, headers = prepare_branch_and_push(
-        github_issue=resolver_output.issue,
-        github_token=github_token,
-        github_username=github_username,
-        patch_dir=patched_repo_dir,
-        pr_type=pr_type,
-    )
+    if resolver_output.git_patch:
+        # 2) apply_patch
+        apply_patch(patched_repo_dir, resolver_output.git_patch)
+
+        # 3) make_commit
+        logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
+        make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
+        
+        # 4) branch checkout and push
+        branch_name, default_branch, base_url, headers = prepare_branch_and_push(
+            github_issue=resolver_output.issue,
+            github_token=github_token,
+            github_username=github_username,
+            patch_dir=patched_repo_dir,
+            pr_type=pr_type,
+        )
+    else:
+        resolver_output.success = False
+        resolver_output.success_explanation = "No git patch found."
     
     resolver_output.branch_name = branch_name
     resolver_output.default_branch = default_branch
@@ -512,7 +518,7 @@ async def process_issue(
 
     # determine success based on the history and the issue description
     # success, comment_success, success_explanation = issue_handler.guess_success(issue, state.history, llm_config)
-    success, comment_success, success_explanation = True, None, "NOT IN USE"
+    success, comment_success, success_explanation = True, None, "Successfully created Git patch."
 
     if issue_handler.issue_type == "pr" and comment_success:
         success_log = "I have updated the PR and resolved some of the issues that were cited in the pull request review. Specifically, I identified the following revision requests, and all the ones that I think I successfully resolved are checked off. All the unchecked ones I was not able to resolve, so manual intervention may be required:\n"
