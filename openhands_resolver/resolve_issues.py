@@ -868,7 +868,7 @@ def main():
         "--max-iterations",
         type=int,
         # PR-Arena doesn't consider the failure/ success of the agent. But it can be used to see how the agent is performing as the iteration increases.
-        default=1,
+        default=10,
         help="Maximum number of iterations to run.",
     )
     parser.add_argument(
