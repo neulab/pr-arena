@@ -494,19 +494,6 @@ async def process_issue(
     )
     if state is None:
         raise RuntimeError("Failed to run the agent.")
-    #Record the current comit hash
-    try:
-        current_commit = (
-            subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=workspace_base
-            )
-            .decode("utf-8")
-            .strip()
-        )
-        logger.info(f"Current commit hash for issue {issue.number}: {current_commit}")
-    except subprocess.CalledProcessError as e:
-        logger.error(f"Failed to retrieve the current commit hash: {e}")
-        current_commit = None
 
     # Get git patch
     return_val = await complete_runtime(runtime, base_commit)
@@ -547,7 +534,6 @@ async def process_issue(
         success_explanation=success_explanation,
         error=state.last_error if state and state.last_error else None,
         model=llm_config.model.split("/")[-1],
-        commit_id=current_commit, 
     )
     return output
 
