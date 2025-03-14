@@ -896,13 +896,13 @@ def main():
         help="LLM models to use.",
     )
     parser.add_argument(
-        "--token-api",
+        "--key",
         type=str,
         default=None,
         help="LLM API key to use.",
     )
     parser.add_argument(
-        "--token-url",
+        "--base-url",
         type=str,
         default=None,
         help="LLM base URL to use.",
@@ -928,7 +928,7 @@ def main():
         help="Type of issue to resolve, either open issue or pr comments.",
     )
     parser.add_argument(
-        "--token-config",
+        "--credential",
         type=str,
         help="Firebase configuration in JSON format."
     )
@@ -967,8 +967,8 @@ def main():
         llm_configs.append(
             LLMConfig(
                 model=model,
-                api_key=my_args.token_api or os.environ["LLM_API_KEY"],
-                base_url=my_args.token_url or os.environ.get("LLM_BASE_URL", None),
+                api_key=my_args.key or os.environ["LLM_API_KEY"],
+                base_url=my_args.base_url or os.environ.get("LLM_BASE_URL", None),
             )
         )
 
@@ -993,10 +993,10 @@ def main():
     with open(prompt_file, 'r') as f:
         prompt_template = f.read()
     
-    raw_config = my_args.token_config if my_args.token_config else os.getenv("FIREBASE_CONFIG")
+    raw_config = my_args.credential if my_args.credential else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
     # Must remove
-    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    # logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     issue_number = issue_numbers[0]
     
