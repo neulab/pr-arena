@@ -162,7 +162,7 @@ def main():
         help="Type of issue to resolve, either open issue or pr comments.",
     )
     parser.add_argument(
-        "--firebase-config",
+        "--token-config",
         type=str,
         help="Firebase configuration in JSON format."
     )
@@ -171,7 +171,7 @@ def main():
     
     owner, repo = my_args.repo.split("/")
     
-    raw_config = my_args.firebase_config if my_args.firebase_config else os.getenv("FIREBASE_CONFIG")
+    raw_config = my_args.token_config if my_args.token_config else os.getenv("FIREBASE_CONFIG")
     firebase_config = load_firebase_config(raw_config)
     # logger.info(f"Firebase Config Loaded... {firebase_config}")
     
