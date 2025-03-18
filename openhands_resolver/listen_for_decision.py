@@ -48,6 +48,72 @@ from openhands_resolver.utils import (
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 
+class Secrets:
+    """Class for retrieving specific secrets from the Firebase Function endpoint."""
+    
+    # Firebase Function endpoint
+    ENDPOINT_URL = "https://us-central1-pr-arena-95f88.cloudfunctions.net/getSecrets"
+    
+    # The token to use for authentication - must be set before using the class
+    TOKEN = "default"
+    
+    @classmethod
+    def _get_secrets(cls, secret_names):
+        """Internal method to retrieve secrets from the Firebase Function."""
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {cls.TOKEN}"
+        }
+        
+        payload = {
+            "secrets": secret_names
+        }
+        
+        response = requests.post(
+            cls.ENDPOINT_URL,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            error_msg = f"Error retrieving secrets: {response.status_code} - {response.text}"
+            raise ValueError(error_msg)
+        
+        try:
+            result = response.json()
+            
+            if not result.get("success"):
+                raise ValueError(f"API reported failure: {result.get('message', 'Unknown error')}")
+                
+            return result.get("secrets", {})
+        except json.JSONDecodeError:
+            raise ValueError(f"Invalid JSON response: {response.text}")
+    
+    @classmethod
+    def get_api_key(cls):
+        """Get the LLM API key directly."""
+        secrets = cls._get_secrets(["LLM_API_KEY"])
+        return secrets.get("LLM_API_KEY")
+    
+    @classmethod
+    def get_firebase_config(cls):
+        """Get the Firebase configuration directly."""
+        secrets = cls._get_secrets(["FIRE_CONFIG"])
+        return secrets.get("FIRE_CONFIG")
+    
+    @classmethod
+    def get_base_url(cls):
+        """Get the base URL directly."""
+        secrets = cls._get_secrets(["BASE_URL"])
+        return secrets.get("BASE_URL")
+    
+    @classmethod
+    def get_llm_models(cls):
+        """Get the LLM models configuration directly."""
+        secrets = cls._get_secrets(["LLM_MODELS"])
+        return secrets.get("LLM_MODELS")
+
 async def get_selected_model_number (document_id: str, firebase_config: dict):
     """
     Listen for changes in a specific Firestore document (comparison ID).
@@ -161,19 +227,15 @@ def main():
         choices=["issue", "pr"],
         help="Type of issue to resolve, either open issue or pr comments.",
     )
-    parser.add_argument(
-        "--token-config",
-        type=str,
-        help="Firebase configuration in JSON format."
-    )
 
     my_args = parser.parse_args()
     
     owner, repo = my_args.repo.split("/")
     
-    raw_config = my_args.token_config if my_args.token_config else os.getenv("FIREBASE_CONFIG")
+    Secrets.TOKEN = my_args.token
+    
+    raw_config = Secrets.get_firebase_config()
     firebase_config = load_firebase_config(raw_config)
-    # logger.info(f"Firebase Config Loaded... {firebase_config}")
     
     asyncio.run(get_selected_model_number (document_id=f"{owner}-{repo}-{int(my_args.issue_number)}", firebase_config=firebase_config))
     

@@ -58,6 +58,71 @@ from firebase_admin import credentials, firestore, initialize_app
 # Don't make this confgurable for now, unless we have other competitive agents
 AGENT_CLASS = "CodeActAgent"
 
+class Secrets:
+    """Class for retrieving specific secrets from the Firebase Function endpoint."""
+    
+    # Firebase Function endpoint
+    ENDPOINT_URL = "https://us-central1-pr-arena-95f88.cloudfunctions.net/getSecrets"
+    
+    # The token to use for authentication - must be set before using the class
+    TOKEN = "default"
+    
+    @classmethod
+    def _get_secrets(cls, secret_names):
+        """Internal method to retrieve secrets from the Firebase Function."""
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {cls.TOKEN}"
+        }
+        
+        payload = {
+            "secrets": secret_names
+        }
+        
+        response = requests.post(
+            cls.ENDPOINT_URL,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            error_msg = f"Error retrieving secrets: {response.status_code} - {response.text}"
+            raise ValueError(error_msg)
+        
+        try:
+            result = response.json()
+            
+            if not result.get("success"):
+                raise ValueError(f"API reported failure: {result.get('message', 'Unknown error')}")
+                
+            return result.get("secrets", {})
+        except json.JSONDecodeError:
+            raise ValueError(f"Invalid JSON response: {response.text}")
+    
+    @classmethod
+    def get_api_key(cls):
+        """Get the LLM API key directly."""
+        secrets = cls._get_secrets(["LLM_API_KEY"])
+        return secrets.get("LLM_API_KEY")
+    
+    @classmethod
+    def get_firebase_config(cls):
+        """Get the Firebase configuration directly."""
+        secrets = cls._get_secrets(["FIRE_CONFIG"])
+        return secrets.get("FIRE_CONFIG")
+    
+    @classmethod
+    def get_base_url(cls):
+        """Get the base URL directly."""
+        secrets = cls._get_secrets(["BASE_URL"])
+        return secrets.get("BASE_URL")
+    
+    @classmethod
+    def get_llm_models(cls):
+        """Get the LLM models configuration directly."""
+        secrets = cls._get_secrets(["LLM_MODELS"])
+        return secrets.get("LLM_MODELS")
 
 def prepare_branch_and_push(
     github_issue: GithubIssue,
@@ -896,12 +961,6 @@ def main():
         help="LLM models to use.",
     )
     parser.add_argument(
-        "--key",
-        type=str,
-        default=None,
-        help="LLM API key to use.",
-    )
-    parser.add_argument(
         "--base-url",
         type=str,
         default=None,
@@ -919,18 +978,12 @@ def main():
         default=None,
         help="Path to the repository instruction file in text format.",
     )
-
     parser.add_argument(
         "--issue-type",
         type=str,
         default="issue",
         choices=["issue", "pr"],
         help="Type of issue to resolve, either open issue or pr comments.",
-    )
-    parser.add_argument(
-        "--credential",
-        type=str,
-        help="Firebase configuration in JSON format."
     )
 
     my_args = parser.parse_args()
@@ -952,7 +1005,7 @@ def main():
     if not token:
         raise ValueError("Github token is required.")
 
-    # (Check!) Suppose all llm models are written in secrets, comma separated.
+    # Suppose all llm models are comma separated.
     models = my_args.llm_models or os.environ["LLM_MODELS"]
     
     if models:
@@ -962,12 +1015,18 @@ def main():
     
     llm_configs = []
     
-    # (Check!) Suppose all the llm models are using the same api keys and base urls (: LLM Provider).
+    Secrets.TOKEN = token
+    
+    # Retrieve the API keys from the endpoint.
+    api_key = Secrets.get_api_key()
+    
+    # Suppose all the llm models are using the same api keys and base urls (: LLM Provider).
     for model in model_names:
         llm_configs.append(
             LLMConfig(
                 model=model,
-                api_key=my_args.key or os.environ["LLM_API_KEY"],
+                # api_key=my_args.key or os.environ["LLM_API_KEY"],
+                api_key=api_key,
                 base_url=my_args.base_url or os.environ.get("LLM_BASE_URL", None),
             )
         )
@@ -993,10 +1052,13 @@ def main():
     with open(prompt_file, 'r') as f:
         prompt_template = f.read()
     
-    raw_config = my_args.credential if my_args.credential else os.getenv("FIREBASE_CONFIG")
+    # Retrieve the firebase configuration from the endpoint.
+    raw_config = Secrets.get_firebase_config()
     firebase_config = load_firebase_config(raw_config)
+    
     # Must remove
-    # logger.info(f"Firebase Config Loaded... {firebase_config}")
+    logger.info(f"Firebase Config Loaded... {firebase_config}")
+    logger.info(f"API Key Loaded... {api_key}")
     
     issue_number = issue_numbers[0]
     
