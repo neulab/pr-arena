@@ -209,7 +209,7 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, github_toke
         base_commit=resolver_output.base_commit,
     )
 
-    logger.info(f"[DEBUG] Previous Patched Repo Dir: {patched_repo_dir}")
+    # logger.info(f"[DEBUG] Previous Patched Repo Dir: {patched_repo_dir}")
     branch_name, default_branch, base_url, headers = None, None, None, None
     
     if resolver_output.git_patch:
@@ -217,7 +217,7 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, github_toke
         apply_patch(patched_repo_dir, resolver_output.git_patch)
 
         # 3) make_commit
-        logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
+        # logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
         make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
         
         # 4) branch checkout and push
@@ -229,7 +229,7 @@ def get_new_commit_hash(output_dir, resolver_output: ResolverOutput, github_toke
             pr_type=pr_type,
         )
         
-        logger.info(f"[DEBUG] Success Patched Repo Dir: {patched_repo_dir}")
+        # logger.info(f"[DEBUG] Success Patched Repo Dir: {patched_repo_dir}")
     else:
         resolver_output.success = False
         resolver_output.success_explanation = "No git patch found."
@@ -1055,10 +1055,6 @@ def main():
     # Retrieve the firebase configuration from the endpoint.
     raw_config = Secrets.get_firebase_config()
     firebase_config = load_firebase_config(raw_config)
-    
-    # Must remove
-    logger.info(f"Firebase Config Loaded... {firebase_config}")
-    logger.info(f"API Key Loaded... {api_key}")
     
     issue_number = issue_numbers[0]
     
