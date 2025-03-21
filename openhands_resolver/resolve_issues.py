@@ -290,7 +290,7 @@ async def send_to_firebase (
     pathlib.Path("output1").mkdir(parents=True, exist_ok=True)
     pathlib.Path("output2").mkdir(parents=True, exist_ok=True)
     
-    file_name = f"{owner}_{repo}_{issue_number}.jsonl"
+    file_name = "output.jsonl"
     output_file1 = pathlib.Path("output1") / file_name
     output_file2 = pathlib.Path("output2") / file_name
     
@@ -330,13 +330,14 @@ async def send_to_firebase (
     
     output_data = {"json1": output_data1, "json2": output_data2, "status": "pending"}
     
+    # output_fp.write(resolved_output.model_dump_json() + "\n")
     # logger.info(f"2.1. Resolvers: {output_data}")
     
     with open(output_file1, "a") as output_fp:
-        output_fp.write(json.dumps(output_data) + "\n")
+        output_fp.write(resolved_output1.model_dump_json() + "\n")
     
     with open(output_file2, "a") as output_fp:
-        output_fp.write(json.dumps(output_data) + "\n")
+        output_fp.write(resolved_output2.model_dump_json() + "\n")
     
     # logger.info("3. Sending jsonl file to firebase.")
     
@@ -616,8 +617,8 @@ async def update_progress(output: ResolverOutput, output_fp: TextIO, pbar: tqdm)
     logger.info(
         f'Finished issue {resolved_output.issue.number}: {resolved_output.metrics.get("test_result", "N/A") if resolved_output.metrics else "N/A"}'
     )
-    output_fp.write(resolved_output.model_dump_json() + "\n")
-    output_fp.flush()
+    # output_fp.write(resolved_output.model_dump_json() + "\n")
+    # output_fp.flush()
 
 def issue_handler_factory(issue_type: str, owner: str, repo: str, token: str) -> IssueHandlerInterface:
     if issue_type == "issue":
@@ -789,7 +790,8 @@ async def resolve_issues(
             with open(openhands_instructions_path, 'r') as f:
                 repo_instruction = f.read()
 
-    # OUTPUT FILE
+    # OUTPUT FILE / Moved the the job of writing to "output.jsonl" to send_to_firebase function
+    # If we write the output here, the output does not contain the data (e.g., Base URL, headers, etc.) which is created in get_new_commit_hash function.
     output_file = os.path.join(output_dir, "output.jsonl")
     logger.info(f"Writing output to {output_file}")
     finished_numbers = set()
