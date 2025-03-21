@@ -269,7 +269,6 @@ def load_firebase_config(config_json: str) -> dict:
 async def send_to_firebase (
     resolved_output1: ResolverOutput,
     resolved_output2: ResolverOutput,
-    output_dir: str,
     owner: str,
     repo: str,
     issue_number: int,
@@ -288,17 +287,17 @@ async def send_to_firebase (
         issue_number (int): Issue number.
         firebase_config (dict): Firebase configuration.
     """
-    # logger.info(f"2. Write down the resolver to {output_dir}/... .")
-    
-    pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+    pathlib.Path("output1").mkdir(parents=True, exist_ok=True)
+    pathlib.Path("output2").mkdir(parents=True, exist_ok=True)
     
     file_name = f"{owner}_{repo}_{issue_number}.jsonl"
-    output_file = pathlib.Path(output_dir) / file_name
+    output_file1 = pathlib.Path("output1") / file_name
+    output_file2 = pathlib.Path("output2") / file_name
     
     # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
     # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
     get_new_commit_hash(
-        output_dir=output_dir,
+        output_dir="output1",
         resolver_output=resolved_output1,
         github_token=token,
         github_username=username,
@@ -306,7 +305,7 @@ async def send_to_firebase (
     
     )
     get_new_commit_hash(
-        output_dir=output_dir,
+        output_dir="output2",
         resolver_output=resolved_output2,
         github_token=token,
         github_username=username,
@@ -333,7 +332,10 @@ async def send_to_firebase (
     
     # logger.info(f"2.1. Resolvers: {output_data}")
     
-    with open(output_file, "a") as output_fp:
+    with open(output_file1, "a") as output_fp:
+        output_fp.write(json.dumps(output_data) + "\n")
+    
+    with open(output_file2, "a") as output_fp:
         output_fp.write(json.dumps(output_data) + "\n")
     
     # logger.info("3. Sending jsonl file to firebase.")
@@ -633,7 +635,6 @@ async def resolve_issues_with_random_models(
     max_iterations: int,
     limit_issues: int | None,
     num_workers: int,
-    output_dir: str,
     llm_configs: list[LLMConfig],
     runtime_container_image: str,
     prompt_template: str,
@@ -658,14 +659,13 @@ async def resolve_issues_with_random_models(
         max_iterations,
         limit_issues,
         num_workers,
-        output_dir,
+        "output1",
         llm_config,
         runtime_container_image,
         prompt_template,
         issue_type,
         repo_instruction,
         issue_numbers,
-        1,
     )
 
     llm_config = selected_llms[1]
@@ -678,14 +678,13 @@ async def resolve_issues_with_random_models(
         max_iterations,
         limit_issues,
         num_workers,
-        output_dir,
+        "output2",
         llm_config,
         runtime_container_image,
         prompt_template,
         issue_type,
         repo_instruction,
         issue_numbers,
-        2,
     )
     
     if asyncio.iscoroutine(resolverOutput1):
@@ -697,7 +696,6 @@ async def resolve_issues_with_random_models(
     await send_to_firebase (
         resolved_output1=resolverOutput1,
         resolved_output2=resolverOutput2,
-        output_dir=output_dir,
         owner=owner,
         repo=repo,
         issue_number=issue_number,
@@ -722,7 +720,6 @@ async def resolve_issues(
     issue_type: str,
     repo_instruction: str | None,
     issue_numbers: list[int] | None,
-    model_number: int,
 ) -> ResolverOutput:
     """Resolve github issues.
 
@@ -793,7 +790,7 @@ async def resolve_issues(
                 repo_instruction = f.read()
 
     # OUTPUT FILE
-    output_file = os.path.join(output_dir, f"output{model_number}.jsonl")
+    output_file = os.path.join(output_dir, "output.jsonl")
     logger.info(f"Writing output to {output_file}")
     finished_numbers = set()
     if os.path.exists(output_file):
@@ -949,12 +946,6 @@ def main():
         help="Number of workers to use.",
     )
     parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="output",
-        help="Output directory to write the results.",
-    )
-    parser.add_argument(
         "--llm-models",
         type=str,
         default=None,
@@ -1068,7 +1059,6 @@ def main():
             max_iterations=my_args.max_iterations,
             limit_issues=my_args.limit_issues,
             num_workers=my_args.num_workers,
-            output_dir=my_args.output_dir,
             llm_configs=llm_configs,
             prompt_template=prompt_template,  # Pass the prompt template
             issue_type=issue_type,

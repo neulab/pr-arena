@@ -483,12 +483,6 @@ def main():
         help="Github username to access the repository.",
     )
     parser.add_argument(
-        "--output-dir",
-        type=str,
-        default="output",
-        help="Output directory to write the results.",
-    )
-    parser.add_argument(
         "--pr-type",
         type=str,
         default="draft",
@@ -534,13 +528,15 @@ def main():
     )
     # Remove the check for github_username
     
-    if not os.path.exists(my_args.output_dir):
-        raise ValueError(f"Output directory {my_args.output_dir} does not exist.")
+    output_dir = f"output{my_args.model_number}"
+    
+    if not os.path.exists(output_dir):
+        raise ValueError(f"Output directory {output_dir} does not exist.")
 
     # [PR-Arena] Issue Number would always be a single number, so the 'if' statement isn't necessary.
     if my_args.issue_number == "all_successful":
         process_all_successful_issues(
-            my_args.output_dir,
+            output_dir,
             github_token,
             github_username,
             my_args.pr_type,
@@ -552,10 +548,10 @@ def main():
         if not my_args.issue_number.isdigit():
             raise ValueError(f"Issue number {my_args.issue_number} is not a number.")
         issue_number = int(my_args.issue_number)
-        output_path = os.path.join(my_args.output_dir, f"output{my_args.model_number}.jsonl")
+        output_path = os.path.join(output_dir, "output.jsonl")
         resolver_output = load_single_resolver_output(output_path, issue_number)
         process_single_issue(
-            my_args.output_dir,
+            output_dir,
             resolver_output,
             github_token,
             github_username,
