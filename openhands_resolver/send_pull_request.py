@@ -164,6 +164,8 @@ def create_pull_request(
     3) Otherwise, sends a POST to GitHub to create the PR and returns the PR URL.
     4) Prints some info and returns the final URL.
     """
+    
+    print(f"Base URL loaded: {base_url}")
 
     # Build title/body
     pr_title = f"Fix issue #{github_issue.number}: {github_issue.title}"
@@ -391,6 +393,8 @@ def process_single_issue(
     #         f"Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation."
     #     )
     #     return
+    
+    print(f"Base URL loaded: {resolver_output.base_url}")
 
     issue_type = resolver_output.issue_type
 
@@ -550,6 +554,9 @@ def main():
         issue_number = int(my_args.issue_number)
         output_path = os.path.join(output_dir, "output.jsonl")
         resolver_output = load_single_resolver_output(output_path, issue_number)
+        
+        print(f"Resolver loaded: {resolver_output}")
+        
         process_single_issue(
             output_dir,
             resolver_output,
