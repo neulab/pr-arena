@@ -345,6 +345,47 @@ async def send_to_firebase (
     model1_id = model_reference.get(resolved_output1.model, "Model ID Not Found")
     model2_id = model_reference.get(resolved_output2.model, "Model ID Not Found")
     
+    if not resolved_output1.git_patch or not resolved_output2.git_patch:
+        issue_data = {
+            "repo_url": repo_url,
+            "issue_name": issue_name,
+            "owner": owner,
+            "repo": repo,
+            "status": "failed",
+            "models": {
+                "modelA": {
+                    "modelId": model1_id,
+                    "modelName": resolved_output1.model,
+                    "commit_hash": resolved_output1.commit_hash,
+                    "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else ""
+                },
+                "modelB": {
+                    "modelId": model2_id,
+                    "modelName": resolved_output2.model,
+                    "commit_hash": resolved_output2.commit_hash,
+                    "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else ""
+                }
+            },
+            "winner": None,  # No winner determined yet
+            "createdAt": current_time,
+            "updatedAt": current_time
+        }
+        
+        reference_id = str(uuid.uuid4())
+        
+        issue_ref = db.collection("issue_collection").document(reference_id)
+        issue_ref.set(issue_data)
+        
+        github_env_path = os.getenv("GITHUB_ENV")
+        if not github_env_path:
+            raise RuntimeError("GITHUB_ENV environment variable is not set.")
+
+        # Write the decision to the environment file
+        with open(github_env_path, "a") as env_file:
+            env_file.write("FAILED=TRUE\n")
+        
+        return
+    
     issue_data = {
         "repo_url": repo_url,
         "issue_name": issue_name,
@@ -413,6 +454,7 @@ async def send_to_firebase (
     # Write the decision to the environment file
     with open(github_env_path, "a") as env_file:
         env_file.write(f"UUID={reference_id}\n")
+        env_file.write("FAILED=FALSE\n")
     
     print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
     print(f"Issue ID: {issue_number}, Models: {resolved_output1.model} vs {resolved_output2.model}")
