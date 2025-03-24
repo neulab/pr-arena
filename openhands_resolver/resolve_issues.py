@@ -13,6 +13,7 @@ import subprocess
 import json
 import random
 import shlex
+import uuid
 
 from termcolor import colored
 from tqdm import tqdm
@@ -312,52 +313,107 @@ async def send_to_firebase (
         pr_type=pr_type
     )
     
-    output_data1 = json.loads(resolved_output1.model_dump_json())
-    output_data1.update({
-        "owner": owner,
-        "repo": repo,
-        "issue_number": issue_number
-    })
-    output_data1.pop('history', None)
-    
-    output_data2 = json.loads(resolved_output2.model_dump_json())
-    output_data2.update({
-        "owner": owner,
-        "repo": repo,
-        "issue_number": issue_number
-    })
-    output_data2.pop('history', None)
-    
-    output_data = {"json1": output_data1, "json2": output_data2, "status": "pending"}
-    
-    # output_fp.write(resolved_output.model_dump_json() + "\n")
-    # logger.info(f"2.1. Resolvers: {output_data}")
-    
+    # Write the resolved output to a JSONL file
     with open(output_file1, "a") as output_fp:
         output_fp.write(resolved_output1.model_dump_json() + "\n")
     
     with open(output_file2, "a") as output_fp:
         output_fp.write(resolved_output2.model_dump_json() + "\n")
     
-    # logger.info("3. Sending jsonl file to firebase.")
-    
+    # Send the resolved output to Firebase Firestore
     cred = credentials.Certificate(firebase_config)
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
-    
-    # logger.info("3.1. Credentials complete")
-    # Initialize Firestore client
+        
     db = firestore.client()
     
-    # logger.info("3.2. Database complete")
+    current_time = firestore.SERVER_TIMESTAMP
     
-    collection_name = "issues"
-    document_id = f"{owner}-{repo}-{issue_number}"
+    repo_url = f"https://github.com/{owner}/{repo}"
+    issue_name = f"Issue #{issue_number}"
+    
+    model_reference = {
+        "claude-3-7-sonnet-20250219": "model1",
+        "gpt-4o-2024-05-13": "model2",
+        "Meta-Llama-3.1-405B-Instruct": "model3",
+        "deepseek-chat": "model4",
+        "gemini-2.0-flash-exp": "model5"
+    }
+    
+    model1_id = model_reference.get(resolved_output1.model, "Model ID Not Found")
+    model2_id = model_reference.get(resolved_output2.model, "Model ID Not Found")
+    
+    issue_data = {
+        "repo_url": repo_url,
+        "issue_name": issue_name,
+        "owner": owner,
+        "repo": repo,
+        "status": "pending",  # Initial status is pending
+        "models": {
+            "modelA": {
+                "modelId": model1_id,
+                "modelName": resolved_output1.model,
+                "commit_hash": resolved_output1.commit_hash,
+                "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else ""
+            },
+            "modelB": {
+                "modelId": model2_id,
+                "modelName": resolved_output2.model,
+                "commit_hash": resolved_output2.commit_hash,
+                "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else ""
+            }
+        },
+        "winner": None,  # No winner determined yet
+        "createdAt": current_time,
+        "updatedAt": current_time
+    }
+    
+    reference_id = str(uuid.uuid4())
+    
+    issue_ref = db.collection("issue_collection").document(reference_id)
+    issue_ref.set(issue_data)
+    
+    current_time = firestore.SERVER_TIMESTAMP
 
-    doc_ref = db.collection(collection_name).document(document_id)
-    doc_ref.set(output_data)
+    user_data = {
+        "githubId": owner,
+        "createdAt": current_time,
+        "lastActive": current_time,
+        "selections": {
+            reference_id: {
+                "issueId": reference_id,
+                "choice": None,  # No choice made yet
+                "selectedAt": None,
+                "isLatest": True,
+                "language": "en",  # Default language
+                "isAnonymous": True,
+                "deduplicated": True,
+                "modelA": {
+                    "modelId": model1_id,
+                    "modelName": resolved_output1.model
+                },
+                "modelB": {
+                    "modelId": model2_id,
+                    "modelName": resolved_output2.model
+                }
+            }
+        }
+    }
+    
+    # Store in user_collection with owner as document ID
+    user_ref = db.collection("userdata_collection").document(owner)
+    user_ref.set(user_data, merge=True)
+    
+    github_env_path = os.getenv("GITHUB_ENV")
+    if not github_env_path:
+        raise RuntimeError("GITHUB_ENV environment variable is not set.")
 
-    print(f"Data successfully written to Firestore collection '{collection_name}' with ID: {document_id}")
+    # Write the decision to the environment file
+    with open(github_env_path, "a") as env_file:
+        env_file.write(f"UUID={reference_id}\n")
+    
+    print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
+    print(f"Issue ID: {issue_number}, Models: {resolved_output1.model} vs {resolved_output2.model}")
 
 
 def create_git_patch(
