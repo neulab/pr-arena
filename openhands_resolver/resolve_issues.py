@@ -337,7 +337,9 @@ async def send_to_firebase (
         "gpt-4o-2024-05-13": "model2",
         "Meta-Llama-3.1-405B-Instruct": "model3",
         "deepseek-chat": "model4",
-        "gemini-2.0-flash-exp": "model5"
+        "gemini-2.0-flash-exp": "model5",
+        "Qwen2.5-72B-Instruct": "model6",
+        "Meta-Llama-3.1-8B-Instruct": "model7"
     }
     
     model1_id = model_reference.get(resolved_output1.model, "Model ID Not Found")
