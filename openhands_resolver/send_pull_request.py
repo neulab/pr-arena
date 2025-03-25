@@ -154,7 +154,6 @@ def create_pull_request(
     headers: dict,
     github_token: str,
     push_owner: str,
-    commit_hash: str,
     pr_type: str,
     additional_message: Optional[str] = None,
 ) -> str:
@@ -407,30 +406,6 @@ def process_single_issue(
         additional_message=resolver_output.success_explanation
     )
 
-
-def process_all_successful_issues(
-    output_dir: str,
-    github_token: str,
-    github_username: str,
-    pr_type: str,
-    fork_owner: str | None,
-    model_number: int,
-) -> None:
-    output_path = os.path.join(output_dir, f"output{model_number}.jsonl")
-    for resolver_output in load_all_resolver_outputs(output_path):
-        if resolver_output.success:
-            print(f"Processing issue {resolver_output.issue.number}")
-            process_single_issue(
-                output_dir,
-                resolver_output,
-                github_token,
-                github_username,
-                pr_type,
-                fork_owner,
-                False,
-            )
-
-
 def main():
     parser = argparse.ArgumentParser(description="Send a pull request to Github.")
     parser.add_argument(
@@ -495,35 +470,21 @@ def main():
     if not os.path.exists(output_dir):
         raise ValueError(f"Output directory {output_dir} does not exist.")
 
-    # [PR-Arena] Issue Number would always be a single number, so the 'if' statement isn't necessary.
-    if my_args.issue_number == "all_successful":
-        process_all_successful_issues(
-            output_dir,
-            github_token,
-            github_username,
-            my_args.pr_type,
-            my_args.fork_owner,
-            my_args.send_on_failure,
-            my_args.model_number,
-        )
-    else:
-        if not my_args.issue_number.isdigit():
-            raise ValueError(f"Issue number {my_args.issue_number} is not a number.")
-        issue_number = int(my_args.issue_number)
-        output_path = os.path.join(output_dir, "output.jsonl")
-        resolver_output = load_single_resolver_output(output_path, issue_number)
-        
-        # print(f"Resolver loaded: {resolver_output}")
-        
-        process_single_issue(
-            output_dir,
-            resolver_output,
-            github_token,
-            github_username,
-            my_args.pr_type,
-            my_args.fork_owner,
-            my_args.send_on_failure,
-        )
+    if not my_args.issue_number.isdigit():
+        raise ValueError(f"Issue number {my_args.issue_number} is not a number.")
+    issue_number = int(my_args.issue_number)
+    output_path = os.path.join(output_dir, "output.jsonl")
+    resolver_output = load_single_resolver_output(output_path, issue_number)
+    
+    process_single_issue(
+        output_dir,
+        resolver_output,
+        github_token,
+        github_username,
+        my_args.pr_type,
+        my_args.fork_owner,
+        my_args.send_on_failure,
+    )
 
 if __name__ == "__main__":
     main()
