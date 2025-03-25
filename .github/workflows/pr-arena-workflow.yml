@@ -9,13 +9,7 @@ on:
       llm_models:
         required: true
         type: string
-      llm_api_key:
-        required: false
-        type: string
         default: ''
-      firebase_config:
-        required: true
-        type: string
       base_url:
         required: true
         type: string
@@ -43,24 +37,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Set LLM_API_KEY from input or secrets
-        run: |
-          if [ -z "${{ inputs.llm_api_key }}" ]; then
-            echo "LLM_API_KEY=${{ secrets.LLM_API_KEY }}" >> $GITHUB_ENV
-          else
-            echo "LLM_API_KEY=${{ inputs.llm_api_key }}" >> $GITHUB_ENV
-          fi
-
-      - name: Set issue number
-        run: echo "ISSUE_NUMBER=${{ inputs.issue_number }}" >> $GITHUB_ENV
-
       - name: Comment on issue with start message
         uses: actions/github-script@v7
         with:
           github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
-              issue_number: ${{ env.ISSUE_NUMBER }},
+              issue_number: ${{ inputs.issue_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `OpenHands started fixing the issue! You can monitor the progress [here](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).`
@@ -75,25 +58,50 @@ jobs:
       - name: Attempt to resolve issues and send the resolver output to Firebase
         env:
           PYTHONPATH: ""
+          LLM_MODELS: ${{ inputs.llm_models }}
         run: |
           cd /tmp && python -m openhands_resolver.resolve_issues \
             --repo ${{ github.repository }} \
-            --issue-numbers ${{ env.ISSUE_NUMBER }} \
+            --issue-numbers ${{ inputs.issue_number }} \
             --token ${{ inputs.pat_token }} \
-            --llm-models ${{ inputs.llm_models }} \
-            --llm-api-key ${{ env.LLM_API_KEY }} \
-            --llm-base-url ${{ inputs.base_url }} \
-            --firebase-config ${{ inputs.firebase_config }}
+            --base-url ${{ inputs.base_url }} \
+            --llm-models '${{ env.LLM_MODELS }}'
+
+      - name: Check for failure
+        id: check_failure
+        run: |
+          if [ "${{ env.FAILED }}" == "TRUE" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "failed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on issue with failure message
+        if: steps.check_failure.outputs.failed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ inputs.pat_token }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ inputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ PR-Arena has encountered an error and cannot continue. The automated fix attempt has failed due to the agent error. Please remove the 'pr-arena' label and add it back to retry.`
+            });
+
+      - name: Exit workflow if failed
+        if: steps.check_failure.outputs.failed == 'true'
+        run: exit 1
 
       - name: Post webpage link to GitHub issue comment
         uses: actions/github-script@v7
         with:
           github-token: ${{ inputs.pat_token }}
           script: |
-            const issueNumber = ${{ env.ISSUE_NUMBER }};
+            const issueNumber = ${{ inputs.issue_number }};
             const repo = context.repo.repo
             const owner = context.repo.owner
-            const firebaseWebpageURL = `https://pr-arena.web.app/${owner}-${repo}-${issueNumber}`;
+            const firebaseWebpageURL = `https://pr-arena.web.app/${{ env.UUID }}`;
 
             github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -103,27 +111,22 @@ jobs:
             });
       
       - name: Wait for user's decision and save it to the GitHub environment
-        env:
-          PYTHONPATH: ""
         run: |
           cd /tmp && python -m openhands_resolver.listen_for_decision \
             --repo ${{ github.repository }} \
-            --issue-number ${{ env.ISSUE_NUMBER }} \
+            --issue-number ${{ inputs.issue_number }} \
             --token ${{ inputs.pat_token }} \
             --username ${{ inputs.pat_username }} \
-            --firebase-config ${{ inputs.firebase_config }}
+            --uuid ${{ env.UUID }}
 
       - name: Create Pull Request for the selected branch
-        env:
-          PYTHONPATH: ""
-          SELECTED_MODEL: ${{ env.SELECTED }}
         run: |
           cd /tmp && python -m openhands_resolver.send_pull_request \
-            --issue-number ${{ env.ISSUE_NUMBER }} \
-            --model-number $SELECTED_MODEL \
+            --issue-number ${{ inputs.issue_number }} \
+            --model-number ${{ env.SELECTED }} \
             --pr-type draft \
-            --token ${{ inputs.pat_token }} | tee pr_result${SELECTED_MODEL}.txt && \
-            grep "draft created" pr_result${SELECTED_MODEL}.txt | sed 's/.*\///g' > pr_number.txt
+            --token ${{ inputs.pat_token }} | tee pr_result${{ env.SELECTED }}.txt && \
+            grep "draft created" pr_result${{ env.SELECTED }}.txt | sed 's/.*\///g' > pr_number.txt
 
       - name: Comment on issue
         uses: actions/github-script@v7
@@ -131,20 +134,19 @@ jobs:
           github-token: ${{ inputs.pat_token }}
           script: |
             const fs = require('fs');
-            const issueNumber = ${{ env.ISSUE_NUMBER }};
+            const issueNumber = ${{ inputs.issue_number }};
             
             let prNumber = '';
-            let branchName = '';
             
             try {
               prNumber = fs.readFileSync('/tmp/pr_number.txt', 'utf8').trim();
-              } catch (error) {
-                console.error('Error reading file:', error);
-              }
+            } catch (error) {
+              console.error('Error reading PR number:', error);
+            }
             
             github.rest.issues.createComment({
               issue_number: issueNumber,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
-              });
+            });

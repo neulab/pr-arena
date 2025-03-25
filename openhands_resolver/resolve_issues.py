@@ -345,7 +345,7 @@ async def send_to_firebase (
     model1_id = model_reference.get(resolved_output1.model, "Model ID Not Found")
     model2_id = model_reference.get(resolved_output2.model, "Model ID Not Found")
     
-    if not resolved_output1.git_patch or not resolved_output2.git_patch:
+    if not resolved_output1.git_patch or not resolved_output2.git_patch or resolved_output1.success is False or resolved_output2.success is False:
         issue_data = {
             "repo_url": repo_url,
             "issue_name": issue_name,
