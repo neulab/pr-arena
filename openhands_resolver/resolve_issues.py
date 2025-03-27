@@ -334,11 +334,11 @@ async def send_to_firebase (
     
     model_reference = {
         "claude-3-7-sonnet-20250219": "model1",
-        "gpt-4o-2024-05-13": "model2",
+        "gpt-4o-2024-08-06": "model2",
         "Meta-Llama-3.1-405B-Instruct": "model3",
         "deepseek-chat": "model4",
         "gemini-2.0-flash-exp": "model5",
-        "Qwen2.5-72B-Instruct": "model6",
+        "deepseek-reasoner": "model6",
         "Meta-Llama-3.1-8B-Instruct": "model7"
     }
     
