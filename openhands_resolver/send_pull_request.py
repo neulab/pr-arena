@@ -187,7 +187,7 @@ def create_pull_request(
         "base": default_branch,
         "draft": (pr_type == "draft"),
     }
-    print(data)
+    # print(data)
     
     response = requests.post(f"{base_url}/pulls", headers=headers, json=data)
     if response.status_code == 403:
@@ -398,7 +398,7 @@ def process_single_issue(
     if issue_type != "issue":
         raise ValueError(f"Invalid issue type: {issue_type}")
 
-    print(resolver_output)
+    # print(resolver_output)
     
     create_pull_request(
         github_issue=resolver_output.issue,
@@ -429,7 +429,7 @@ def main():
     parser.add_argument(
         "--pr-type",
         type=str,
-        default="ready",
+        default="draft",
         choices=["branch", "draft", "ready"],
         help="Type of the pull request to send [branch, draft, ready]",
     )
