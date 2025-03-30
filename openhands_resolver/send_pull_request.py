@@ -429,7 +429,7 @@ def main():
     parser.add_argument(
         "--pr-type",
         type=str,
-        default="draft",
+        default="ready",
         choices=["branch", "draft", "ready"],
         help="Type of the pull request to send [branch, draft, ready]",
     )
