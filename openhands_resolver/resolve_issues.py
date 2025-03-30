@@ -368,7 +368,8 @@ async def send_to_firebase (
             },
             "winner": None,  # No winner determined yet
             "createdAt": current_time,
-            "updatedAt": current_time
+            "updatedAt": current_time,
+            "installationToken": token
         }
         
         reference_id = str(uuid.uuid4())
@@ -408,7 +409,8 @@ async def send_to_firebase (
         },
         "winner": None,  # No winner determined yet
         "createdAt": current_time,
-        "updatedAt": current_time
+        "updatedAt": current_time,
+        "installationToken": token
     }
     
     reference_id = str(uuid.uuid4())
