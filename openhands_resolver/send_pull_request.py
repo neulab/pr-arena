@@ -187,6 +187,8 @@ def create_pull_request(
         "base": default_branch,
         "draft": (pr_type == "draft"),
     }
+    print(data)
+    
     response = requests.post(f"{base_url}/pulls", headers=headers, json=data)
     if response.status_code == 403:
         raise RuntimeError(
@@ -394,6 +396,8 @@ def process_single_issue(
     if issue_type != "issue":
         raise ValueError(f"Invalid issue type: {issue_type}")
 
+    print(resolver_output)
+    
     create_pull_request(
         github_issue=resolver_output.issue,
         branch_name=cast(str, resolver_output.branch_name),
