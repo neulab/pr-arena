@@ -195,6 +195,8 @@ def create_pull_request(
             "Failed to create pull request due to missing permissions. "
             "Make sure the provided token has push permissions."
         )
+    if response.status_code != 201:
+        print(f"Error response: {response.status_code} {response.text}")
     response.raise_for_status()
     pr_data = response.json()
     url = pr_data["html_url"]
