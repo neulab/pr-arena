@@ -14,6 +14,7 @@ import json
 import random
 import shlex
 import uuid
+import time
 
 from termcolor import colored
 from tqdm import tqdm
@@ -339,7 +340,9 @@ async def send_to_firebase (
         "deepseek-chat": "model4",
         "gemini-2.0-flash-exp": "model5",
         "deepseek-reasoner": "model6",
-        "Meta-Llama-3.1-8B-Instruct": "model7"
+        "Meta-Llama-3.1-8B-Instruct": "model7",
+        "o3-mini": "model8",
+        "gemini-2.5-pro-exp-03-25": "model9",
     }
     
     model1_id = model_reference.get(resolved_output1.model, "Model ID Not Found")
@@ -357,13 +360,15 @@ async def send_to_firebase (
                     "modelId": model1_id,
                     "modelName": resolved_output1.model,
                     "commit_hash": resolved_output1.commit_hash,
-                    "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else ""
+                    "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else "",
+                    "duration": resolved_output1.duration if resolved_output1.duration else None
                 },
                 "modelB": {
                     "modelId": model2_id,
                     "modelName": resolved_output2.model,
                     "commit_hash": resolved_output2.commit_hash,
-                    "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else ""
+                    "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else "",
+                    "duration": resolved_output2.duration if resolved_output2.duration else None
                 }
             },
             "winner": None,  # No winner determined yet
@@ -398,13 +403,15 @@ async def send_to_firebase (
                 "modelId": model1_id,
                 "modelName": resolved_output1.model,
                 "commit_hash": resolved_output1.commit_hash,
-                "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else ""
+                "agent_code": resolved_output1.git_patch if resolved_output1.git_patch else "",
+                "duration": resolved_output1.duration if resolved_output1.duration else None
             },
             "modelB": {
                 "modelId": model2_id,
                 "modelName": resolved_output2.model,
                 "commit_hash": resolved_output2.commit_hash,
-                "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else ""
+                "agent_code": resolved_output2.git_patch if resolved_output2.git_patch else "",
+                "duration": resolved_output1.duration if resolved_output1.duration else None
             }
         },
         "winner": None,  # No winner determined yet
@@ -839,6 +846,7 @@ async def resolve_issues(
         repo_instruction: Repository instruction to use.
         issue_numbers: List of issue numbers to resolve.
     """
+    start_time = time.time()
 
     issue_handler = issue_handler_factory(issue_type, owner, repo, token)
 
@@ -988,6 +996,11 @@ async def resolve_issues(
 
     output_fp.close()
     logger.info("Finished.")
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    logger.info(f"Total time taken: {duration} seconds")
+    resolverOutput.duration = duration
     
     return resolverOutput
 

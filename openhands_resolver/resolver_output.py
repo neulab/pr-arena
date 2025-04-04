@@ -22,3 +22,4 @@ class ResolverOutput(BaseModel):
     base_url: Optional[str] = None
     headers: Optional[dict] = None
     model: str
+    duration: Optional[float] = None
