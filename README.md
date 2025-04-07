@@ -1,4 +1,16 @@
-# (Migrating to GitHub App) PR Arena ⚔️
+# PR Arena ⚔️
+
+---
+
+## PR Arena (GitHub App)
+
+You can use PR-Arena **without the API Key** for limited time!
+
+[Go to OpenHands PR-Arena GitHub App](https://github.com/neulab/pr-arena/tree/main/openhands_resolver/GitHub%20App).
+
+---
+
+## PR Arena (Manual)
 
 PR Arena is a coding assistant designed to evaluate and improve [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) through paired pull request (PR) generations. It enables developers to compare contributions from different LLMs such as GPT-4o, Llama, and more.
 
