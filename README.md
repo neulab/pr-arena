@@ -6,7 +6,7 @@
 
 You can use PR-Arena **without the API Key** for limited time!
 
-[Go to OpenHands PR-Arena GitHub App](https://github.com/neulab/pr-arena/tree/main/openhands_resolver/GitHub%20App).
+➡️ Go to [OpenHands PR-Arena GitHub App](https://github.com/neulab/pr-arena/tree/main/openhands_resolver/GitHub%20App)
 
 ---
 
