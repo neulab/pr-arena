@@ -1,10 +1,11 @@
 # **OpenHands PR Arena ⚔️ - GitHub App**
 
 ## How to use
-1. Install the App on your GitHub repository.
+0. Install the App on your GitHub repository.
    - https://github.com/apps/openhands-pr-arena/installations/new
+1. Go to the repository where the App is installed, or select repositories to install the App below at `Repository access`.
 2. Label an issue with `pr-arena` to trigger an automated fix.
-   - Create or click a specific issue, and press the `Labels` on the sidebar on your right. Type `pr-arena` to label the issue.
+  💡 Create or click a specific issue, and press the `Labels` on the sidebar on your right. Type `pr-arena` to label the issue.
 3. Wait for approximately 30 minutes (up to 40 minutes) for the agent to resolve the issue and open the Arena.
 4. Click the link in the comment to enter the Arena, and choose preferred model.
 5. The selected fix is automatically generated as a Pull Request.
@@ -17,6 +18,12 @@
 ## Privacy Notification
 1. The only codes we collect are the `git_diff` we make during resolving the issue. We **never** collect the whole codebase and **never** release the data.
 2. **Never** try to modify the workflow. The workflow will not be triggered once modified.
+3. The followings are what we collect about users, regarding the **Privacy**:
+  - User info: `owner`, `repo`, `repo URL`
+  - Model info: `user preference on model`, `duration of an attempt`
+  - Code info: `agent code (git_diffs)`, `commit hash` 
+
+Note that we **never** access user repository for codebase.
 
 ---
 
