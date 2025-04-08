@@ -378,8 +378,8 @@ async def send_to_firebase (
         
         reference_id = str(uuid.uuid4())
         
-        # issue_ref = db.collection("issue_collection").document(reference_id)
-        # issue_ref.set(issue_data)
+        issue_ref = db.collection("issue_collection").document(reference_id)
+        issue_ref.set(issue_data)
         
         github_env_path = os.getenv("GITHUB_ENV")
         if not github_env_path:
@@ -421,8 +421,8 @@ async def send_to_firebase (
     
     reference_id = str(uuid.uuid4())
     
-    # issue_ref = db.collection("issue_collection").document(reference_id)
-    # issue_ref.set(issue_data)
+    issue_ref = db.collection("issue_collection").document(reference_id)
+    issue_ref.set(issue_data)
     
     current_time = firestore.SERVER_TIMESTAMP
 
@@ -452,8 +452,8 @@ async def send_to_firebase (
     }
     
     # Store in user_collection with owner as document ID
-    # user_ref = db.collection("userdata_collection").document(owner)
-    # user_ref.set(user_data, merge=True)
+    user_ref = db.collection("userdata_collection").document(owner)
+    user_ref.set(user_data, merge=True)
     
     github_env_path = os.getenv("GITHUB_ENV")
     if not github_env_path:
