@@ -20,7 +20,7 @@ from firebase_admin import credentials, firestore
 class PRArenaIssueResolver(IssueResolver):
 
     def __init__(self, args: Namespace):
-        super().__init__(*args) # Most shared arguments are processed by parent class
+        super().__init__(args) # Most shared arguments are processed by parent class
 
 
         # Initialize values for custom resolver
@@ -358,9 +358,7 @@ def main():
     issue_resolver = PRArenaIssueResolver(my_args)
     
     asyncio.run(
-        issue_resolver.resolve_issues_with_random_models(
-            
-        )
+        issue_resolver.resolve_issues_with_random_models()
     )
 
 if __name__ == "__main__":
