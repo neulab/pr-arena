@@ -1,3 +1,7 @@
+import json
+import requests
+
+
 class Secrets:
     """Class for retrieving specific secrets from the Firebase Function endpoint."""
     
