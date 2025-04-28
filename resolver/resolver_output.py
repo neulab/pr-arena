@@ -1,4 +1,3 @@
-from typing import Optional
 from openhands.resolver.resolver_output import ResolverOutput
 
 class CustomResolverOutput(ResolverOutput):

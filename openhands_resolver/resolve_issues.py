@@ -3,7 +3,7 @@
 import asyncio
 import dataclasses
 import shutil
-from typing import Any, Awaitable, TextIO
+from typing import Any, TextIO
 import argparse
 import multiprocessing as mp
 import os
@@ -20,7 +20,7 @@ from termcolor import colored
 from tqdm import tqdm
 
 
-from typing import cast, Optional
+from typing import Optional
 
 from openhands_resolver.github_issue import GithubIssue
 from openhands_resolver.issue_definitions import ( 
@@ -50,11 +50,10 @@ from openhands_resolver.utils import (
     reset_logger_for_multiprocessing,
 )
 
-from openhands_resolver.patching import parse_patch, apply_diff
 from openhands_resolver.send_pull_request import initialize_repo, apply_patch, make_commit, branch_exists
 
 import firebase_admin
-from firebase_admin import credentials, firestore, initialize_app
+from firebase_admin import credentials, firestore
 
 
 # Don't make this confgurable for now, unless we have other competitive agents

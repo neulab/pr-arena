@@ -9,11 +9,6 @@ import uuid
 from openhands.resolver.resolve_issue import IssueResolver
 from openhands.resolver.resolver_output import ResolverOutput
 from openhands.core.config import LLMConfig
-from openhands.resolver.send_pull_request import (
-    initialize_repo, 
-    apply_patch, 
-    make_commit
-)
 
 from resolver.secrets import Secrets
 from resolver.utils import load_firebase_config
@@ -101,21 +96,21 @@ class PRArenaIssueResolver(IssueResolver):
         
         # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
         # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
-        get_new_commit_hash(
-            output_dir="output1",
-            resolver_output=resolved_output_1,
-            github_token=self.token,
-            github_username=self.username,
-            pr_type=pr_type
+        # get_new_commit_hash(
+        #     output_dir="output1",
+        #     resolver_output=resolved_output_1,
+        #     github_token=self.token,
+        #     github_username=self.username,
+        #     pr_type=pr_type
         
-        )
-        get_new_commit_hash(
-            output_dir="output2",
-            resolver_output=resolved_output_2,
-            github_token=self.token,
-            github_username=self.username,
-            pr_type=pr_type
-        )
+        # )
+        # get_new_commit_hash(
+        #     output_dir="output2",
+        #     resolver_output=resolved_output_2,
+        #     github_token=self.token,
+        #     github_username=self.username,
+        #     pr_type=pr_type
+        # )
         
         # Write the resolved output to a JSONL file
         with open(output_file1, "a") as output_fp:

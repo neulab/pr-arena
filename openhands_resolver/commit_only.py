@@ -1,7 +1,6 @@
 import argparse
 import os
 import subprocess
-from openhands_resolver.resolver_output import ResolverOutput
 from openhands_resolver.io_utils import load_single_resolver_output
 from openhands_resolver.github_issue import GithubIssue
 from openhands_resolver.patching import parse_patch, apply_diff
