@@ -1,3 +1,6 @@
+import json
+
+
 def load_firebase_config(config_json: str) -> dict:
     """Load Firebase configuration from JSON string."""
     try:
