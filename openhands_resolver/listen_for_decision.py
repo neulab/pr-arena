@@ -1,53 +1,17 @@
 # flake8: noqa: E501
 
 import asyncio
-import dataclasses
-import shutil
-from typing import Any, Awaitable, TextIO
 import argparse
-import multiprocessing as mp
 import os
-import pathlib
 import requests
-import subprocess
 import json
-import random
-import time
-
-from termcolor import colored
-from tqdm import tqdm
 
 
-from openhands_resolver.github_issue import GithubIssue
-from openhands_resolver.issue_definitions import ( 
-    IssueHandler, 
-    IssueHandlerInterface, 
-    PRHandler
-)
-from openhands_resolver.resolver_output import ResolverOutput
-import openhands
-from openhands.core.main import create_runtime, run_controller
-from openhands.controller.state.state import State
+
 from openhands.core.logger import openhands_logger as logger
-from openhands.events.action import CmdRunAction, MessageAction
-from openhands.events.observation import (
-    CmdOutputObservation,
-    ErrorObservation,
-    Observation,
-)
-from openhands.core.config import (
-    AppConfig,
-    SandboxConfig,
-)
-from openhands.core.config import LLMConfig
-from openhands.runtime.runtime import Runtime
-from openhands_resolver.utils import (
-    codeact_user_response,
-    reset_logger_for_multiprocessing,
-)
 
 import firebase_admin
-from firebase_admin import credentials, firestore, initialize_app
+from firebase_admin import credentials, firestore
 
 class Secrets:
     """Class for retrieving specific secrets from the Firebase Function endpoint."""

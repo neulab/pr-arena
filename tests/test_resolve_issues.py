@@ -1,7 +1,6 @@
 import os
 import tempfile
 import pytest
-import asyncio
 from unittest.mock import AsyncMock, patch, MagicMock
 from openhands_resolver.issue_definitions import IssueHandler, PRHandler
 from openhands_resolver.resolve_issues import (

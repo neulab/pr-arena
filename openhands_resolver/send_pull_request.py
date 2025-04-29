@@ -3,7 +3,6 @@ import os
 import shutil
 from openhands_resolver.github_issue import GithubIssue
 from openhands_resolver.io_utils import (
-    load_all_resolver_outputs,
     load_single_resolver_output,
 )
 from openhands_resolver.patching import parse_patch, apply_diff
