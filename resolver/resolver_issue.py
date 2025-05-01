@@ -4,11 +4,13 @@ from argparse import Namespace
 import asyncio
 import pathlib
 import random
+from typing import Any
 import uuid
 
 from openhands.resolver.resolve_issue import IssueResolver
 from openhands.resolver.resolver_output import ResolverOutput
 from openhands.core.config import LLMConfig
+from openhands.runtime import Runtime
 
 from resolver.secrets import Secrets
 from resolver.utils import load_firebase_config
@@ -48,6 +50,16 @@ class PRArenaIssueResolver(IssueResolver):
 
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
+
+    async def complete_runtime(
+        self,
+        runtime: Runtime,
+        base_commit: str,
+    ) -> dict[str, Any]:
+        patch = await super().complete_runtime(runtime, base_commit)
+        runtime.close()
+        return patch
+        
 
     async def resolve_issues_with_random_models(self):
         selected_llms = random.sample(self.llm_configs, 2)
