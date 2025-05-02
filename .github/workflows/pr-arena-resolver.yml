@@ -101,7 +101,8 @@ jobs:
             --issue-numbers ${{ inputs.issue_number }} \
             --token ${{ secrets.PAT_TOKEN }} \
             --base-url ${{ inputs.base_url }} \
-            --llm-models '${{ env.LLM_MODELS }}'
+            --llm-models '${{ env.LLM_MODELS }}'\
+            --username ${{ secrets.PAT_USERNAME }} \
         continue-on-error: true
 
       - name: Check for failure

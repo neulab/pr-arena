@@ -1,10 +1,23 @@
+import asyncio
+import dataclasses
+import json
 import os
+import pathlib
+import shutil
+import subprocess
 import argparse
 from argparse import Namespace
-import asyncio
-import pathlib
-import random
+from typing import Any, cast
 import uuid
+import random
+import shlex
+import time
+import requests
+
+import openhands
+from openhands.core.logger import openhands_logger as logger
+from openhands.resolver.interfaces.issue import Issue
+from openhands.resolver.resolver_output import ResolverOutput
 
 from openhands.resolver.resolve_issue import IssueResolver
 from openhands.resolver.resolver_output import ResolverOutput
@@ -13,9 +26,19 @@ from openhands.core.config import LLMConfig
 from resolver.secrets import Secrets
 from resolver.utils import load_firebase_config
 from resolver.resolver_output import CustomResolverOutput
+from resolver.send_pull_request import (
+    initialize_repo,
+    apply_patch,
+    make_commit,
+    branch_exists
+)
 
 import firebase_admin
 from firebase_admin import credentials, firestore
+
+# Don't make this confgurable for now, unless we have other competitive agents
+AGENT_CLASS = 'CodeActAgent'
+
 
 class PRArenaIssueResolver(IssueResolver):
 
@@ -57,9 +80,9 @@ class PRArenaIssueResolver(IssueResolver):
                                                  model=self.llm_config.model.split("/")[-1])
 
 
-        self.llm_config = selected_llms # Set new config
+        self.llm_config = selected_llms[1] # Set new config
         resolver_output_2: ResolverOutput = await self.resolve_issue()
-        resolver_output_1 = CustomResolverOutput(**resolver_output_2.model_dump(),
+        resolver_output_2 = CustomResolverOutput(**resolver_output_2.model_dump(),
                                                  model=self.llm_config.model.split("/")[-1])
 
 
@@ -96,21 +119,17 @@ class PRArenaIssueResolver(IssueResolver):
         
         # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
         # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
-        # get_new_commit_hash(
-        #     output_dir="output1",
-        #     resolver_output=resolved_output_1,
-        #     github_token=self.token,
-        #     github_username=self.username,
-        #     pr_type=pr_type
+        self.get_new_commit_hash(
+            output_dir="output1",
+            resolver_output=resolved_output_1,
+            pr_type=pr_type
         
-        # )
-        # get_new_commit_hash(
-        #     output_dir="output2",
-        #     resolver_output=resolved_output_2,
-        #     github_token=self.token,
-        #     github_username=self.username,
-        #     pr_type=pr_type
-        # )
+        )
+        self.get_new_commit_hash(
+            output_dir="output2",
+            resolver_output=resolved_output_2,
+            pr_type=pr_type
+        )
         
         # Write the resolved output to a JSONL file
         with open(output_file1, "a") as output_fp:
@@ -142,8 +161,8 @@ class PRArenaIssueResolver(IssueResolver):
             "o3-mini": "model8",
         }
         
-        model1_id = model_reference.get(resolved_output_1.model, "Model ID Not Found")
-        model2_id = model_reference.get(resolved_output_2.model, "Model ID Not Found")
+        model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
+        model2_id = model_reference.get((cast(str, resolved_output_2.model)), "Model ID Not Found")
         
         if not resolved_output_1.git_patch or not resolved_output_2.git_patch or resolved_output_1.success is False or resolved_output_2.success is False:
             issue_data = {
@@ -265,6 +284,286 @@ class PRArenaIssueResolver(IssueResolver):
         print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
         print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
 
+    
+    async def resolve_issue(
+        self,
+        reset_logger: bool = False,
+    ) -> ResolverOutput:
+        """Resolve a single issue.
+
+        Args:
+            reset_logger: Whether to reset the logger for multiprocessing.
+        """
+        start_time = time.time()
+        
+        issue_handler = self.issue_handler_factory()
+
+        # Load dataset
+        issues: list[Issue] = issue_handler.get_converted_issues(
+            issue_numbers=[self.issue_number], comment_id=self.comment_id
+        )
+
+        if not issues:
+            raise ValueError(
+                f'No issues found for issue number {self.issue_number}. Please verify that:\n'
+                f'1. The issue/PR #{self.issue_number} exists in the repository {self.owner}/{self.repo}\n'
+                f'2. You have the correct permissions to access it\n'
+                f'3. The repository name is spelled correctly'
+            )
+
+        issue = issues[0]
+
+        if self.comment_id is not None:
+            if (
+                self.issue_type == 'pr'
+                and not issue.review_comments
+                and not issue.review_threads
+                and not issue.thread_comments
+            ):
+                raise ValueError(
+                    f'Comment ID {self.comment_id} did not have a match for issue {issue.number}'
+                )
+
+            if self.issue_type == 'issue' and not issue.thread_comments:
+                raise ValueError(
+                    f'Comment ID {self.comment_id} did not have a match for issue {issue.number}'
+                )
+
+        # TEST METADATA
+        model_name = self.llm_config.model.split('/')[-1]
+
+        pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(os.path.join(self.output_dir, 'infer_logs')).mkdir(
+            parents=True, exist_ok=True
+        )
+        logger.info(f'Using output directory: {self.output_dir}')
+
+        # checkout the repo
+        repo_dir = os.path.join(self.output_dir, 'repo')
+        if not os.path.exists(repo_dir):
+            checkout_output = subprocess.check_output(  # noqa: ASYNC101
+                [
+                    'git',
+                    'clone',
+                    issue_handler.get_clone_url(),
+                    f'{self.output_dir}/repo',
+                ]
+            ).decode('utf-8')
+            if 'fatal' in checkout_output:
+                raise RuntimeError(f'Failed to clone repository: {checkout_output}')
+
+        # get the commit id of current repo for reproducibility
+        base_commit = (
+            subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)  # noqa: ASYNC101
+            .decode('utf-8')
+            .strip()
+        )
+        logger.info(f'Base commit: {base_commit}')
+
+        # Commenting out because we are not using repo_instruction for PR-Arena
+        # if self.repo_instruction is None:
+        #     # Check for .openhands_instructions file in the workspace directory
+        #     openhands_instructions_path = os.path.join(
+        #         repo_dir, '.openhands_instructions'
+        #     )
+        #     if os.path.exists(openhands_instructions_path):
+        #         with open(openhands_instructions_path, 'r') as f:  # noqa: ASYNC101
+        #             self.repo_instruction = f.read()
+
+        # OUTPUT FILE
+        output_file = os.path.join(self.output_dir, 'output.jsonl')
+        logger.info(f'Writing output to {output_file}')
+
+        # Check if this issue was already processed
+        if os.path.exists(output_file):
+            with open(output_file, 'r') as f:  # noqa: ASYNC101
+                for line in f:
+                    data = ResolverOutput.model_validate_json(line)
+                    if data.issue.number == self.issue_number:
+                        logger.warning(
+                            f'Issue {self.issue_number} was already processed. Skipping.'
+                        )
+                        return
+
+        logger.info(
+            f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model {model_name}, max iterations {self.max_iterations}.'
+        )
+
+        try:
+            # checkout to pr branch if needed
+            if self.issue_type == 'pr':
+                branch_to_use = issue.head_branch
+                logger.info(
+                    f'Checking out to PR branch {branch_to_use} for issue {issue.number}'
+                )
+
+                if not branch_to_use:
+                    raise ValueError('Branch name cannot be None')
+
+                # Fetch the branch first to ensure it exists locally
+                fetch_cmd = ['git', 'fetch', 'origin', branch_to_use]
+                subprocess.check_output(  # noqa: ASYNC101
+                    fetch_cmd,
+                    cwd=repo_dir,
+                )
+
+                # Checkout the branch
+                checkout_cmd = ['git', 'checkout', branch_to_use]
+                subprocess.check_output(  # noqa: ASYNC101
+                    checkout_cmd,
+                    cwd=repo_dir,
+                )
+
+                base_commit = (
+                    subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)  # noqa: ASYNC101
+                    .decode('utf-8')
+                    .strip()
+                )
+
+            output = await self.process_issue(
+                issue,
+                base_commit,
+                issue_handler,
+                reset_logger,
+            )
+
+        finally:
+            logger.info('Finished.')
+            
+            end_time = time.time()
+            duration = end_time - start_time
+            logger.info(f"Total time taken: {duration} seconds")
+            output.duration = duration
+            
+            return output
+    
+    
+    def get_new_commit_hash(
+        self,
+        output_dir,
+        resolver_output: ResolverOutput,
+        pr_type: str
+    ) -> None:
+        # 1) initialize_repo
+        patched_repo_dir = initialize_repo(
+            output_dir=output_dir,
+            issue_number=resolver_output.issue.number,
+            issue_type=resolver_output.issue_type,
+            base_commit=resolver_output.base_commit,
+        )
+
+        # logger.info(f"[DEBUG] Previous Patched Repo Dir: {patched_repo_dir}")
+        branch_name, default_branch, base_url, headers = None, None, None, None
+        
+        if resolver_output.git_patch:
+            # 2) apply_patch
+            apply_patch(patched_repo_dir, resolver_output.git_patch)
+
+            # 3) make_commit
+            # logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
+            make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
+            
+            # 4) branch checkout and push
+            branch_name, default_branch, base_url, headers = self.prepare_branch_and_push(
+                patch_dir=patched_repo_dir,
+                pr_type=pr_type,
+            )
+            
+            # logger.info(f"[DEBUG] Success Patched Repo Dir: {patched_repo_dir}")
+        else:
+            resolver_output.success = False
+            resolver_output.success_explanation = "No git patch found."
+        
+        resolver_output.branch_name = branch_name
+        resolver_output.default_branch = default_branch
+        resolver_output.base_url = base_url
+        resolver_output.headers = headers
+
+        # 5) Retrieve commit hash
+        rev_parse_cmd = f'git -C "{patched_repo_dir}" rev-parse HEAD'
+        result = subprocess.run(rev_parse_cmd, shell=True, capture_output=True, text=True)
+        new_hash = result.stdout.strip()
+
+        # 6) Assign it back to the resolver_output
+        resolver_output.commit_hash = new_hash
+        resolver_output.repo_dir = patched_repo_dir
+
+        return
+    
+    
+    def prepare_branch_and_push(
+        self,
+        patch_dir: str,
+        pr_type: str,
+    ) -> tuple[str, str, str, dict]:
+        """
+        1) Validates pr_type.
+        2) Sets up API headers, base_url.
+        3) Generates a unique branch name.
+        4) Gets the repository's default branch.
+        5) Creates & checks out a new local branch.
+        6) Pushes the new branch to GitHub.
+        7) Returns the data needed for creating a PR (branch name, default branch, base_url, etc.)
+        plus the commit hash of HEAD.
+        """
+
+        if pr_type not in ["branch", "draft", "ready"]:
+            raise ValueError(f"Invalid pr_type: {pr_type}")
+
+        # Prepare GitHub API details
+        headers = {
+            "Authorization": f"token {self.token}",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        base_url = f"https://api.github.com/repos/{self.owner}/{self.repo}"
+
+        # Create a new branch name
+        base_branch_name = f"openhands-fix-issue-{self.issue_number}-try1"
+        branch_name = base_branch_name
+        attempt = 1
+
+        # Ensure the branch doesn't already exist on the remote
+        while branch_exists(base_url, branch_name, headers):
+            attempt += 1
+            branch_name = f"{base_branch_name}-try{attempt}"
+
+        # Get the default branch
+        response = requests.get(base_url, headers=headers)
+        response.raise_for_status()
+        default_branch = response.json()["default_branch"]
+
+        # Create and checkout the new branch locally
+        result = subprocess.run(
+            f"git -C {shlex.quote(patch_dir)} checkout -b {shlex.quote(branch_name)}",
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"Error creating new branch: {result.stderr}")
+            raise RuntimeError(f"Failed to create a new branch {branch_name} in {patch_dir}.")
+
+        # Determine the repository to push to
+        push_owner = self.owner
+        push_repo = self.repo
+
+        # Construct push command
+        username_and_token = (
+            f"{self.username}:{self.token}"
+            if self.username else
+            f"x-auth-token:{self.token}"
+        )
+        push_command = (
+            f"git -C {shlex.quote(patch_dir)} push "
+            f"https://{username_and_token}@github.com/"
+            f"{push_owner}/{push_repo}.git {shlex.quote(branch_name)}"
+        )
+        result = subprocess.run(push_command, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error pushing changes\n{push_command}\n{result.stderr}")
+            raise RuntimeError("Failed to push changes to the remote repository")
+
+        return branch_name, default_branch, base_url, headers
     
 def main():
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
