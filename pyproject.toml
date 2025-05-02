@@ -2,19 +2,6 @@
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry]
-name = "openhands-resolver"
-version = "0.2.0"
-description = "OpenHands Issue Resolver"
-authors = ["All Hands AI"]
-license = "MIT"
-readme = "README.md"
-repository = "https://github.com/All-Hands-AI/openhands-resolver"
-include = ["poetry.lock"]
-packages = [
-    { include = "openhands_resolver" },
-]
-
 [tool.poetry.dependencies]
 python = "^3.12"
 #openhands-ai = "^0.33.0"
