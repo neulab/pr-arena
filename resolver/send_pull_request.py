@@ -13,7 +13,6 @@ from openhands.core.logger import openhands_logger as logger
 from openhands.integrations.service_types import ProviderType
 from openhands.llm.llm import LLM
 from openhands.resolver.interfaces.github import GithubIssueHandler
-from openhands.resolver.interfaces.gitlab import GitlabIssueHandler
 from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue
 from openhands.resolver.io_utils import (
@@ -21,8 +20,6 @@ from openhands.resolver.io_utils import (
 )
 from openhands.resolver.patching import apply_diff, parse_patch
 from openhands.resolver.resolver_output import ResolverOutput
-from openhands.resolver.utils import identify_token
-from openhands.utils.async_utils import GENERAL_TIMEOUT, call_async_from_sync
 
 
 def apply_patch(repo_dir: str, patch: str) -> None:
@@ -227,7 +224,7 @@ def send_pull_request(
     token: str,
     username: str | None,
     platform: ProviderType,
-    patch_dir: str,
+    resolver_output: ResolverOutput,
     pr_type: str,
     fork_owner: str | None = None,
     additional_message: str | None = None,
@@ -236,46 +233,38 @@ def send_pull_request(
     pr_title: str | None = None,
     base_domain: str | None = None,
 ) -> str:
-    """Send a pull request to a GitHub or Gitlab repository.
+    """Send a pull request to a GitHub repository.
 
     Args:
         issue: The issue to send the pull request for
-        token: The GitHub or Gitlab token to use for authentication
-        username: The GitHub or Gitlab username, if provided
-        platform: The platform of the repository.
-        patch_dir: The directory containing the patches to apply
+        token: The GitHub token to use for authentication
+        username: The GitHub username, if provided
+        platform: The platform of the repository (always GitHub)
+        resolver_output: The resolver output containing branch information
         pr_type: The type: branch (no PR created), draft or ready (regular PR created)
         fork_owner: The owner of the fork to push changes to (if different from the original repo owner)
         additional_message: The additional messages to post as a comment on the PR in json list format
         target_branch: The target branch to create the pull request against (defaults to repository default branch)
-        reviewer: The GitHub or Gitlab username of the reviewer to assign
+        reviewer: The GitHub username of the reviewer to assign
         pr_title: Custom title for the pull request (optional)
-        base_domain: The base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)
+        base_domain: The base domain for the git server (defaults to "github.com")
     """
     if pr_type not in ['branch', 'draft', 'ready']:
         raise ValueError(f'Invalid pr_type: {pr_type}')
 
-    # Determine default base_domain based on platform
+    # Set default base_domain
     if base_domain is None:
-        base_domain = 'github.com' if platform == ProviderType.GITHUB else 'gitlab.com'
+        base_domain = 'github.com'
 
-    handler = None
-    if platform == ProviderType.GITHUB:
-        handler = ServiceContextIssue(
-            GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain),
-            None,
-        )
-    else:  # platform == Platform.GITLAB
-        handler = ServiceContextIssue(
-            GitlabIssueHandler(issue.owner, issue.repo, token, username, base_domain),
-            None,
-        )
-
-    # Create a new branch with a unique name
-    base_branch_name = f'openhands-fix-issue-{issue.number}'
-    branch_name = handler.get_branch_name(
-        base_branch_name=base_branch_name,
+    # Create GitHub handler
+    handler = ServiceContextIssue(
+        GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain),
+        None,
     )
+
+    # Use the branch name from resolver_output
+    branch_name = resolver_output.branch_name
+    logger.info(f'Using existing branch: {branch_name}')
 
     # Get the default branch or use specified target branch
     logger.info('Getting base branch...')
@@ -288,34 +277,9 @@ def send_pull_request(
         base_branch = handler.get_default_branch_name()
     logger.info(f'Base branch: {base_branch}')
 
-    # Create and checkout the new branch
-    logger.info('Creating new branch...')
-    result = subprocess.run(
-        ['git', '-C', patch_dir, 'checkout', '-b', branch_name],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        logger.error(f'Error creating new branch: {result.stderr}')
-        raise RuntimeError(
-            f'Failed to create a new branch {branch_name} in {patch_dir}:'
-        )
-
     # Determine the repository to push to (original or fork)
     push_owner = fork_owner if fork_owner else issue.owner
-
     handler._strategy.set_owner(push_owner)
-
-    logger.info('Pushing changes...')
-    push_url = handler.get_clone_url()
-    result = subprocess.run(
-        ['git', '-C', patch_dir, 'push', push_url, branch_name],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        logger.error(f'Error pushing changes: {result.stderr}')
-        raise RuntimeError('Failed to push changes to the remote repository')
 
     # Prepare the PR data: title and body
     final_pr_title = (
@@ -328,7 +292,7 @@ def send_pull_request(
 
     # For cross repo pull request, we need to send head parameter like fork_owner:branch as per git documentation here : https://docs.github.com/en/rest/pulls/pulls?apiVersion=2022-11-28#create-a-pull-request
     # head parameter usage : The name of the branch where your changes are implemented. For cross-repository pull requests in the same network, namespace head with a user like this: username:branch.
-    if fork_owner and platform == ProviderType.GITHUB:
+    if fork_owner:
         head_branch = f'{fork_owner}:{branch_name}'
     else:
         head_branch = branch_name
@@ -340,13 +304,9 @@ def send_pull_request(
         # Prepare the PR for the GitHub API
         data = {
             'title': final_pr_title,
-            ('body' if platform == ProviderType.GITHUB else 'description'): pr_body,
-            (
-                'head' if platform == ProviderType.GITHUB else 'source_branch'
-            ): head_branch,
-            (
-                'base' if platform == ProviderType.GITHUB else 'target_branch'
-            ): base_branch,
+            'body': pr_body,
+            'head': head_branch,
+            'base': base_branch,
             'draft': pr_type == 'draft',
         }
 
@@ -370,7 +330,7 @@ def update_existing_pull_request(
     token: str,
     username: str | None,
     platform: ProviderType,
-    patch_dir: str,
+    resolver_output: ResolverOutput,
     llm_config: LLMConfig,
     comment_message: str | None = None,
     additional_message: str | None = None,
@@ -380,47 +340,28 @@ def update_existing_pull_request(
 
     Args:
         issue: The issue to update.
-        token: The  token to use for authentication.
-        username: The username to use for authentication.
-        platform: The platform of the repository.
-        patch_dir: The directory containing the patches to apply.
+        token: The GitHub token to use for authentication.
+        username: The GitHub username to use for authentication.
+        platform: The platform of the repository (always GitHub).
+        resolver_output: The resolver output containing branch information.
         llm_config: The LLM configuration to use for summarizing changes.
         comment_message: The main message to post as a comment on the PR.
         additional_message: The additional messages to post as a comment on the PR in json list format.
-        base_domain: The base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)
+        base_domain: The base domain for the git server (defaults to "github.com")
     """
-    # Set up headers and base URL for GitHub or GitLab API
-
-    # Determine default base_domain based on platform
+    # Set default base_domain
     if base_domain is None:
-        base_domain = 'github.com' if platform == ProviderType.GITHUB else 'gitlab.com'
+        base_domain = 'github.com'
 
-    handler = None
-    if platform == ProviderType.GITHUB:
-        handler = ServiceContextIssue(
-            GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain),
-            llm_config,
-        )
-    else:  # platform == Platform.GITLAB
-        handler = ServiceContextIssue(
-            GitlabIssueHandler(issue.owner, issue.repo, token, username, base_domain),
-            llm_config,
-        )
-
-    branch_name = issue.head_branch
-
-    # Prepare the push command
-    push_command = (
-        f'git -C {patch_dir} push '
-        f'{handler.get_authorize_url()}'
-        f'{issue.owner}/{issue.repo}.git {branch_name}'
+    # Create GitHub handler
+    handler = ServiceContextIssue(
+        GithubIssueHandler(issue.owner, issue.repo, token, username, base_domain),
+        llm_config,
     )
 
-    # Push the changes to the existing branch
-    result = subprocess.run(push_command, shell=True, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.error(f'Error pushing changes: {result.stderr}')
-        raise RuntimeError('Failed to push changes to the remote repository')
+    # We don't need to push changes as that's handled in resolve_issues.py
+    branch_name = resolver_output.branch_name
+    logger.info(f'Using existing branch: {branch_name}')
 
     pr_url = handler.get_pull_url(issue.number)
     logger.info(f'Updated pull request {pr_url} with new patches.')
@@ -491,19 +432,27 @@ def process_single_issue(
 ) -> None:
     # Determine default base_domain based on platform
     if base_domain is None:
-        base_domain = 'github.com' if platform == ProviderType.GITHUB else 'gitlab.com'
+        base_domain = 'github.com'
+        
+    issue_type = resolver_output.issue_type
+    
+    # [PR-Arena] issue_type is always "issue"
+    if issue_type != "issue":
+        raise ValueError(f"Invalid issue type: {issue_type}")
+        
     if not resolver_output.success and not send_on_failure:
         logger.info(
             f'Issue {resolver_output.issue.number} was not successfully resolved. Skipping PR creation.'
         )
         return
 
+    # Create a PR using the branch that was already created in resolve_issues.py
     send_pull_request(
         issue=resolver_output.issue,
         token=token,
         username=username,
         platform=platform,
-        patch_dir=patched_repo_dir,
+        resolver_output=resolver_output,
         pr_type=pr_type,
         fork_owner=fork_owner,
         additional_message=resolver_output.result_explanation,
@@ -516,31 +465,19 @@ def process_single_issue(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description='Send a pull request to Github or Gitlab.'
-    )
-    parser.add_argument(
-        '--selected-repo',
-        type=str,
-        default=None,
-        help='repository to send pull request in form of `owner/repo`.',
+        description='Send a pull request to Github.'
     )
     parser.add_argument(
         '--token',
         type=str,
         default=None,
-        help='token to access the repository.',
+        help='Github token to access the repository.',
     )
     parser.add_argument(
         '--username',
         type=str,
         default=None,
         help='username to access the repository.',
-    )
-    parser.add_argument(
-        '--output-dir',
-        type=str,
-        default='output',
-        help='Output directory to write the results.',
     )
     parser.add_argument(
         '--pr-type',
@@ -593,7 +530,7 @@ def main() -> None:
     parser.add_argument(
         '--reviewer',
         type=str,
-        help='GitHub or GitLab username of the person to request review from',
+        help='GitHub username of the person to request review from',
         default=None,
     )
     parser.add_argument(
@@ -606,43 +543,48 @@ def main() -> None:
         '--base-domain',
         type=str,
         default=None,
-        help='Base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)',
+        help='Base domain for the git server (defaults to "github.com")',
+    )
+    parser.add_argument(
+        '--model-number',
+        type=int,
+        required=True,
+        help='Get the number of model for the ARENA setting.',
     )
     my_args = parser.parse_args()
 
-    token = my_args.token or os.getenv('GITHUB_TOKEN') or os.getenv('GITLAB_TOKEN')
+    token = my_args.token or os.getenv('GITHUB_TOKEN')
     if not token:
         raise ValueError(
-            'token is not set, set via --token or GITHUB_TOKEN or GITLAB_TOKEN environment variable.'
+            'token is not set, set via --token or GITHUB_TOKEN environment variable.'
         )
     username = my_args.username if my_args.username else os.getenv('GIT_USERNAME')
+    if not username:
+        raise ValueError('username is required.')
 
-    platform = call_async_from_sync(
-        identify_token,
-        GENERAL_TIMEOUT,
-        token,
-        my_args.base_domain,
-    )
+    # Set platform to GitHub only
+    platform = ProviderType.GITHUB
 
-    api_key = my_args.llm_api_key or os.environ['LLM_API_KEY']
+    api_key = my_args.llm_api_key or os.environ.get('LLM_API_KEY')
     llm_config = LLMConfig(
-        model=my_args.llm_model or os.environ['LLM_MODEL'],
+        model=my_args.llm_model or os.environ.get('LLM_MODEL'),
         api_key=SecretStr(api_key) if api_key else None,
         base_url=my_args.llm_base_url or os.environ.get('LLM_BASE_URL', None),
     )
 
-    if not os.path.exists(my_args.output_dir):
-        raise ValueError(f'Output directory {my_args.output_dir} does not exist.')
+    output_dir = f'output{my_args.model_number}'
+    
+    if not os.path.exists(output_dir):
+        raise ValueError(f'Output directory {output_dir} does not exist.')
 
     if not my_args.issue_number.isdigit():
         raise ValueError(f'Issue number {my_args.issue_number} is not a number.')
     issue_number = int(my_args.issue_number)
-    output_path = os.path.join(my_args.output_dir, 'output.jsonl')
+    output_path = os.path.join(output_dir, 'output.jsonl')
     resolver_output = load_single_resolver_output(output_path, issue_number)
-    if not username:
-        raise ValueError('username is required.')
+    
     process_single_issue(
-        my_args.output_dir,
+        output_dir,
         resolver_output,
         token,
         username,
