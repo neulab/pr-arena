@@ -12,11 +12,12 @@ on:
       base_url:
         required: true
         type: string
-    secrets:
-      PAT_TOKEN:
+      pat_token:
         required: true
-      PAT_USERNAME:
+        type: string
+      pat_username:
         required: true
+        type: string
 
 permissions:
   contents: write
@@ -31,7 +32,7 @@ jobs:
       - name: Initial comment with instruction
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
@@ -75,7 +76,7 @@ jobs:
       - name: Comment on issue with start message
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
@@ -99,10 +100,10 @@ jobs:
           cd /tmp && python -m resolver.resolve_issues \
             --repo ${{ github.repository }} \
             --issue-numbers ${{ inputs.issue_number }} \
-            --token ${{ secrets.PAT_TOKEN }} \
+            --token ${{ inputs.pat_token }} \
             --base-url ${{ inputs.base_url }} \
             --llm-models '${{ env.LLM_MODELS }}'\
-            --username ${{ secrets.PAT_USERNAME }} \
+            --username ${{ inputs.pat_username }} \
         continue-on-error: true
 
       - name: Check for failure
@@ -118,7 +119,7 @@ jobs:
         if: steps.check_failure.outputs.failed == 'true' || failure()
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
@@ -154,7 +155,7 @@ jobs:
         if: ${{ always() && job.status == 'cancelled' }}
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
@@ -169,8 +170,8 @@ jobs:
           cd /tmp && python -m resolver.listen_for_decision \
             --repo ${{ github.repository }} \
             --issue-number ${{ inputs.issue_number }} \
-            --token ${{ secrets.PAT_TOKEN }} \
-            --username ${{ secrets.PAT_USERNAME }} \
+            --token ${{ inputs.pat_token }} \
+            --username ${{ inputs.pat_username }} \
             --uuid ${{ env.UUID }}
         continue-on-error: true
 
@@ -187,7 +188,7 @@ jobs:
         if: steps.check_decision.outputs.decision_failed == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
@@ -203,8 +204,9 @@ jobs:
           cd /tmp && python -m resolver.send_pull_request \
             --issue-number ${{ inputs.issue_number }} \
             --model-number ${{ env.SELECTED }} \
-            --pr-type ready \
-            --token ${{ secrets.PAT_TOKEN }} | tee pr_result${{ env.SELECTED }}.txt && \
+            --pr-type draft \
+            --username ${{ inputs.pat_username }} \
+            --token ${{ inputs.pat_token }} | tee pr_result${{ env.SELECTED }}.txt && \
             grep "draft created" pr_result${{ env.SELECTED }}.txt | sed 's/.*\///g' > pr_number.txt
         continue-on-error: true
 
@@ -212,7 +214,7 @@ jobs:
         if: steps.create_pr.outcome == 'success'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             const fs = require('fs');
             const issueNumber = ${{ inputs.issue_number }};
@@ -236,7 +238,7 @@ jobs:
         if: steps.create_pr.outcome == 'failure'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             github.rest.issues.createComment({
               issue_number: ${{ inputs.issue_number }},
