@@ -2,9 +2,16 @@
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry]
+name = "pr-arena"
+version = "0.1.0"
+description = "PR Arena for OpenHands"
+authors = ["All Hands AI"]
+license = "MIT"
+readme = "README.md"
+
 [tool.poetry.dependencies]
 python = "^3.12"
-#openhands-ai = "^0.33.0"
 openhands-ai = { git = "https://github.com/All-Hands-AI/OpenHands.git", rev = "1c4c477b3f9eb38a664f43cff5b83561e5314166" }
 pandas = "^2.2.3"
 pytest = "^8.3.3"
@@ -21,4 +28,3 @@ types-toml = "*"
 [tool.poetry.group.test.dependencies]
 pytest = "*"
 pytest-asyncio = "*"
-
