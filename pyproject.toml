@@ -3,7 +3,7 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "pr-arena"
+name = "resolver"
 version = "0.1.0"
 description = "PR Arena for OpenHands"
 authors = ["All Hands AI"]
