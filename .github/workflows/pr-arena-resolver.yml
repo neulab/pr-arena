@@ -98,8 +98,9 @@ jobs:
           LLM_MODELS: ${{ inputs.llm_models }}
         run: |
           cd /tmp && python -m resolver.resolve_issue \
-            --repo ${{ github.repository }} \
-            --issue-numbers ${{ inputs.issue_number }} \
+            --selected-repo ${{ github.repository }} \
+            --comment-id ${{ github.event.comment.id || 'None' }} \
+            --issue-number ${{ inputs.issue_number }} \
             --token ${{ inputs.pat_token }} \
             --base-url ${{ inputs.base_url }} \
             --llm-models '${{ env.LLM_MODELS }}'\

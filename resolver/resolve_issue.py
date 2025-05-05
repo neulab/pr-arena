@@ -5,7 +5,6 @@ import os
 import pathlib
 import shutil
 import subprocess
-import argparse
 from argparse import Namespace
 from typing import Any, cast
 import uuid
@@ -64,7 +63,7 @@ class PRArenaIssueResolver(IssueResolver):
                 LLMConfig(
                     model=model,
                     api_key=api_key,
-                    base_url=args.base_url or os.environ.get("LLM_BASE_URL", None),
+                    base_url=args.llm_base_url or os.environ.get("LLM_BASE_URL", None),
                 )
             )
 
@@ -568,91 +567,123 @@ class PRArenaIssueResolver(IssueResolver):
         return branch_name, default_branch, base_url, headers
     
 def main():
+    import argparse
+    
+    def int_or_none(value: str) -> int | None:
+        if value.lower() == 'none':
+            return None
+        else:
+            return int(value)
+        
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
     parser.add_argument(
-        "--repo",
+        '--selected-repo',
         type=str,
         required=True,
-        help="Github repository to resolve issues in form of `owner/repo`.",
+        help='repository to resolve issues in form of `owner/repo`.',
     )
     parser.add_argument(
-        "--token",
+        '--token',
         type=str,
         default=None,
-        help="Github token to access the repository.",
+        help='token to access the repository.',
     )
     parser.add_argument(
-        "--username",
+        '--username',
         type=str,
         default=None,
-        help="Github username to access the repository.",
+        help='username to access the repository.',
     )
     parser.add_argument(
-        "--runtime-container-image",
+        '--base-container-image',
         type=str,
         default=None,
-        help="Container image to use.",
+        help='base container image to use.',
     )
     parser.add_argument(
-        "--agent-class",
+        '--runtime-container-image',
         type=str,
-        default="CodeActAgent",
-        help="The agent class to use.",
+        default=None,
+        help='Container image to use.',
     )
     parser.add_argument(
-        "--max-iterations",
+        '--max-iterations',
         type=int,
         default=50,
-        help="Maximum number of iterations to run.",
+        help='Maximum number of iterations to run.',
     )
     parser.add_argument(
-        "--limit-issues",
+        '--issue-number',
         type=int,
-        default=None,
-        help="Limit the number of issues to resolve.",
+        required=True,
+        help='Issue number to resolve.',
     )
     parser.add_argument(
-        "--issue-numbers",
+        '--comment-id',
+        type=int_or_none,
+        required=False,
+        default=None,
+        help='Resolve a specific comment',
+    )
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default='output',
+        help='Output directory to write the results.',
+    )
+    parser.add_argument(
+        '--llm-model',
+        type=str,
+        default='Mock GPT',
+        help='Mock model name to adapt with the existing code.',
+    )
+    parser.add_argument(
+        '--llm-models',
         type=str,
         default=None,
-        help="Comma separated list of issue numbers to resolve.",
+        help='LLM models to use.',
     )
     parser.add_argument(
-        "--num-workers",
-        type=int,
-        default=1,
-        help="Number of workers to use.",
-    )
-    parser.add_argument(
-        "--llm-models",
+        '--llm-api-key',
         type=str,
         default=None,
-        help="LLM models to use.",
+        help='LLM API key to use.',
     )
     parser.add_argument(
-        "--base-url",
+        '--llm-base-url',
         type=str,
         default=None,
-        help="LLM base URL to use.",
+        help='LLM base URL to use.',
     )
     parser.add_argument(
-        "--prompt-file",
+        '--prompt-file',
         type=str,
         default=None,
-        help="Path to the prompt template file in Jinja format.",
+        help='Path to the prompt template file in Jinja format.',
     )
     parser.add_argument(
-        "--repo-instruction-file",
+        '--repo-instruction-file',
         type=str,
         default=None,
-        help="Path to the repository instruction file in text format.",
+        help='Path to the repository instruction file in text format.',
     )
     parser.add_argument(
-        "--issue-type",
+        '--issue-type',
         type=str,
-        default="issue",
-        choices=["issue", "pr"],
-        help="Type of issue to resolve, either open issue or pr comments.",
+        default='issue',
+        choices=['issue', 'pr'],
+        help='Type of issue to resolve, either open issue or pr comments.',
+    )
+    parser.add_argument(
+        '--is-experimental',
+        type=lambda x: x.lower() == 'true',
+        help='Whether to run in experimental mode.',
+    )
+    parser.add_argument(
+        '--base-domain',
+        type=str,
+        default=None,
+        help='Base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)',
     )
 
     my_args = parser.parse_args()
