@@ -90,11 +90,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install git+https://github.com/neulab/pr-arena.git@main
           pip install firebase-admin
+          # Copy the resolver package to /tmp for direct import
+          cp -r $GITHUB_WORKSPACE/resolver /tmp/
 
       - name: Attempt to resolve issues and send the resolver output to Firebase
         id: resolve_issues
         env:
-          PYTHONPATH: ""
+          PYTHONPATH: "/tmp"
           LLM_MODELS: ${{ inputs.llm_models }}
         run: |
           cd /tmp && python -m resolver.resolve_issue \
@@ -166,6 +168,8 @@ jobs:
       
       - name: Wait for user's decision and save it to the GitHub environment
         id: wait_for_decision
+        env:
+          PYTHONPATH: "/tmp"
         run: |
           cd /tmp && python -m resolver.listen_for_decision \
             --repo ${{ github.repository }} \
@@ -200,6 +204,8 @@ jobs:
       - name: Create Pull Request for the selected branch
         id: create_pr
         if: steps.check_decision.outputs.decision_failed != 'true'
+        env:
+          PYTHONPATH: "/tmp"
         run: |
           cd /tmp && python -m resolver.send_pull_request \
             --issue-number ${{ inputs.issue_number }} \

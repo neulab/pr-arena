@@ -29,9 +29,17 @@ from resolver.resolver_output import CustomResolverOutput
 from resolver.send_pull_request import (
     initialize_repo,
     apply_patch,
-    make_commit,
-    branch_exists
+    make_commit
 )
+
+def branch_exists(base_url, branch_name, headers):
+    """Check if a branch exists in the remote repository."""
+    import requests
+    try:
+        response = requests.get(f"{base_url}/branches/{branch_name}", headers=headers)
+        return response.status_code == 200
+    except Exception:
+        return False
 
 import firebase_admin
 from firebase_admin import credentials, firestore
