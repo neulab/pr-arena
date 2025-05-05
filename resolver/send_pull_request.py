@@ -296,27 +296,23 @@ def send_pull_request(
         head_branch = f'{fork_owner}:{branch_name}'
     else:
         head_branch = branch_name
-    # If we are not sending a PR, we can finish early and return the
-    # URL for the user to open a PR manually
-    if pr_type == 'branch':
-        url = handler.get_compare_url(branch_name)
-    else:
-        # Prepare the PR for the GitHub API
-        data = {
-            'title': final_pr_title,
-            'body': pr_body,
-            'head': head_branch,
-            'base': base_branch,
-            'draft': pr_type == 'draft',
-        }
+        
+    # Prepare the PR for the GitHub API
+    data = {
+        'title': final_pr_title,
+        'body': pr_body,
+        'head': head_branch,
+        'base': base_branch,
+        'draft': pr_type == 'draft',
+    }
 
-        pr_data = handler.create_pull_request(data)
-        url = pr_data['html_url']
+    pr_data = handler.create_pull_request(data)
+    url = pr_data['html_url']
 
-        # Request review if a reviewer was specified
-        if reviewer and pr_type != 'branch':
-            number = pr_data['number']
-            handler.request_reviewers(reviewer, number)
+    # Request review if a reviewer was specified
+    if reviewer and pr_type != 'branch':
+        number = pr_data['number']
+        handler.request_reviewers(reviewer, number)
 
     logger.info(
         f'{pr_type} created: {url}\n\n--- Title: {final_pr_title}\n\n--- Body:\n{pr_body}'
@@ -500,7 +496,8 @@ def main() -> None:
     )
     parser.add_argument(
         '--send-on-failure',
-        action='store_true',
+        # action='store_true',
+        default=False,
         help='Send a pull request even if the issue was not successfully resolved.',
     )
     parser.add_argument(
@@ -565,12 +562,13 @@ def main() -> None:
     # Set platform to GitHub only
     platform = ProviderType.GITHUB
 
-    api_key = my_args.llm_api_key or os.environ.get('LLM_API_KEY')
-    llm_config = LLMConfig(
-        model=my_args.llm_model or os.environ.get('LLM_MODEL'),
-        api_key=SecretStr(api_key) if api_key else None,
-        base_url=my_args.llm_base_url or os.environ.get('LLM_BASE_URL', None),
-    )
+    # Not use LLM - only used for OpenHands Resolver > update_existing_pull_request
+    # api_key = my_args.llm_api_key or os.environ.get('LLM_API_KEY')
+    # llm_config = LLMConfig(
+    #     model=my_args.llm_model or os.environ.get('LLM_MODEL'),
+    #     api_key=SecretStr(api_key) if api_key else None,
+    #     base_url=my_args.llm_base_url or os.environ.get('LLM_BASE_URL', None),
+    # )
 
     output_dir = f'output{my_args.model_number}'
     
@@ -590,13 +588,13 @@ def main() -> None:
         username,
         platform,
         my_args.pr_type,
-        llm_config,
+        None,
         my_args.fork_owner,
         my_args.send_on_failure,
-        my_args.target_branch,
+        resolver_output.default_branch,
         my_args.reviewer,
-        my_args.pr_title,
-        my_args.base_domain,
+        None,
+        None,
     )
 
 

@@ -206,6 +206,7 @@ jobs:
             --model-number ${{ env.SELECTED }} \
             --pr-type draft \
             --username ${{ inputs.pat_username }} \
+            --reviewer ${{ github.actor }} \
             --token ${{ inputs.pat_token }} | tee pr_result${{ env.SELECTED }}.txt && \
             grep "draft created" pr_result${{ env.SELECTED }}.txt | sed 's/.*\///g' > pr_number.txt
         continue-on-error: true

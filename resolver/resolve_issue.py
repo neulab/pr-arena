@@ -13,6 +13,7 @@ import random
 import shlex
 import time
 import requests
+import httpx
 
 import openhands
 from openhands.core.logger import openhands_logger as logger
@@ -29,8 +30,7 @@ from resolver.resolver_output import CustomResolverOutput
 from resolver.send_pull_request import (
     initialize_repo,
     apply_patch,
-    make_commit,
-    branch_exists
+    make_commit
 )
 
 import firebase_admin
@@ -469,6 +469,8 @@ class PRArenaIssueResolver(IssueResolver):
                 pr_type=pr_type,
             )
             
+            resolver_output.success = False
+            resolver_output.success_explanation = "Git patch applied successfully."
             # logger.info(f"[DEBUG] Success Patched Repo Dir: {patched_repo_dir}")
         else:
             resolver_output.success = False
@@ -523,7 +525,7 @@ class PRArenaIssueResolver(IssueResolver):
         attempt = 1
 
         # Ensure the branch doesn't already exist on the remote
-        while branch_exists(base_url, branch_name, headers):
+        while httpx.get(f'{base_url}/branches/{branch_name}', headers=headers).status_code == 200:
             attempt += 1
             branch_name = f"{base_branch_name}-try{attempt}"
 
