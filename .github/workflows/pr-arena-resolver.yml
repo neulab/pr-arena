@@ -102,7 +102,7 @@ jobs:
             --comment-id ${{ github.event.comment.id || 'None' }} \
             --issue-number ${{ inputs.issue_number }} \
             --token ${{ inputs.pat_token }} \
-            --base-url ${{ inputs.base_url }} \
+            --llm-base-url ${{ inputs.base_url }} \
             --llm-models '${{ env.LLM_MODELS }}'\
             --username ${{ inputs.pat_username }} \
         continue-on-error: true
