@@ -97,7 +97,7 @@ jobs:
           PYTHONPATH: ""
           LLM_MODELS: ${{ inputs.llm_models }}
         run: |
-          cd /tmp && python -m resolver.resolve_issues \
+          cd /tmp && python -m resolver.resolve_issue \
             --repo ${{ github.repository }} \
             --issue-numbers ${{ inputs.issue_number }} \
             --token ${{ inputs.pat_token }} \
