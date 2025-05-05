@@ -10,7 +10,7 @@ authors = ["All Hands AI"]
 license = "MIT"
 readme = "README.md"
 packages = [
-    { include = "resolver" },
+    { include = "resolver" }
 ]
 
 [tool.poetry.dependencies]
