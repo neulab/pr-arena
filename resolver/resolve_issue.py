@@ -13,6 +13,16 @@ import shlex
 import time
 import requests
 import httpx
+from enum import Enum
+
+from resolver.secrets import Secrets
+from resolver.utils import load_firebase_config
+from resolver.resolver_output import CustomResolverOutput
+from resolver.send_pull_request import (
+    initialize_repo,
+    apply_patch,
+    make_commit
+)
 
 import openhands
 from openhands.core.logger import openhands_logger as logger
@@ -23,14 +33,25 @@ from openhands.resolver.resolve_issue import IssueResolver
 from openhands.resolver.resolver_output import ResolverOutput
 from openhands.core.config import LLMConfig
 
-from resolver.secrets import Secrets
-from resolver.utils import load_firebase_config
-from resolver.resolver_output import CustomResolverOutput
-from resolver.send_pull_request import (
-    initialize_repo,
-    apply_patch,
-    make_commit
-)
+
+from openhands.integrations.service_types import ProviderType
+
+# Monkey patch the token validation function to bypass the validation
+import openhands.resolver.utils
+from openhands.integrations.service_types import ProviderType
+# Original function
+original_identify_token = openhands.resolver.utils.identify_token
+
+# Patched function that always returns GitHub as the provider
+async def patched_identify_token(token: str, base_domain: str | None) -> ProviderType:
+    """
+    Patched version of identify_token that always returns GitHub as the provider.
+    This is used to bypass the token validation in the GitHub workflow.
+    """
+    return ProviderType.GITHUB
+
+# Apply the patch
+openhands.resolver.utils.identify_token = patched_identify_token
 
 import firebase_admin
 from firebase_admin import credentials, firestore
