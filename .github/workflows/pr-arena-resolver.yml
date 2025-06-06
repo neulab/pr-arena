@@ -44,18 +44,18 @@ jobs:
             ## Scenario for success
 
             You will be receiving 3 comments on issue as the workflow progresses:
-            - [ ] OpenHands started fixing the issue! You can monitor the progress here.
-             - Please allow up to **40 minutes** for OpenHands to complete fixing the issue.
-            - [ ] ⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at this link.
-             - Click the link to view the proposed fixes and select your preferred model. We recommend opening the link in a new tab.
-            - [ ] PR has been created based on the fix you've selected. Please review the changes below.
-             - Click the link below to view the PR and merge it into your codebase!
+            1. OpenHands started fixing the issue! You can monitor the progress here.
+              - Please allow up to **40 minutes** for OpenHands to complete fixing the issue.
+            2. ⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at this link.
+              - Click the link to view the proposed fixes and select your preferred model. We recommend opening the link in a new tab.
+            3. PR has been created based on the fix you've selected. Please review the changes below.
+              - Click the link below to view the PR and merge it into your codebase!
             
              ## Scenario for failure
              
             You will be informed via comments on issue if the workflow fails:
-            - [ ] ❌ PR-Arena has failed due to the ___. Please remove the 'pr-arena' label and add it back to retry.
-             - Simply remove the label, wait for 5 seconds, and add it back to retry the workflow.
+            ❌ PR-Arena has failed due to the ___. Please remove the 'pr-arena' label and add it back to retry.
+              - Simply remove the label, wait for 5 seconds, and add it back to retry the workflow.
 
             Please [email our support team](mailto:jiseungh@andrew.cmu.edu) if the error persists after retrying.
 
@@ -90,6 +90,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install git+https://github.com/neulab/pr-arena.git@main
           pip install firebase-admin
+          pip install tree_sitter_languages
 
       - name: Attempt to resolve issues and send the resolver output to Firebase
         id: resolve_issues
