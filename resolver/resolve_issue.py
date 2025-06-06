@@ -29,29 +29,14 @@ from openhands.core.logger import openhands_logger as logger
 from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.resolver_output import ResolverOutput
 
-from openhands.resolver.resolve_issue import IssueResolver
+from openhands.resolver.issue_resolver import IssueResolver
 from openhands.resolver.resolver_output import ResolverOutput
 from openhands.core.config import LLMConfig
-
+from openhands.runtime import Runtime
 
 from openhands.integrations.service_types import ProviderType
-
-# Monkey patch the token validation function to bypass the validation
-import openhands.resolver.utils
-from openhands.integrations.service_types import ProviderType
-# Original function
-original_identify_token = openhands.resolver.utils.identify_token
-
-# Patched function that always returns GitHub as the provider
-async def patched_identify_token(token: str, base_domain: str | None) -> ProviderType:
-    """
-    Patched version of identify_token that always returns GitHub as the provider.
-    This is used to bypass the token validation in the GitHub workflow.
-    """
-    return ProviderType.GITHUB
-
-# Apply the patch
-openhands.resolver.utils.identify_token = patched_identify_token
+from openhands.resolver.issue_handler_factory import IssueHandlerFactory
+from openhands.core.config.utils import load_openhands_config
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -63,8 +48,90 @@ AGENT_CLASS = 'CodeActAgent'
 class PRArenaIssueResolver(IssueResolver):
 
     def __init__(self, args: Namespace):
-        super().__init__(args) # Most shared arguments are processed by parent class
+        # super().__init__(args) # Most shared arguments are processed by parent class
+        parts = args.selected_repo.rsplit('/', 1)
+        if len(parts) < 2:
+            raise ValueError('Invalid repository format. Expected owner/repo')
+        owner, repo = parts
 
+        token = args.token or os.getenv('GITHUB_TOKEN') or os.getenv('GITLAB_TOKEN')
+        username = args.username if args.username else os.getenv('GIT_USERNAME')
+        if not username:
+            raise ValueError('Username is required.')
+
+        if not token:
+            raise ValueError('Token is required.')
+
+        platform = ProviderType.GITHUB
+
+        repo_instruction = None
+        if args.repo_instruction_file:
+            with open(args.repo_instruction_file, 'r') as f:
+                repo_instruction = f.read()
+
+        issue_type = args.issue_type
+
+        # Read the prompt template
+        prompt_file = args.prompt_file
+        if prompt_file is None:
+            if issue_type == 'issue':
+                prompt_file = os.path.join(
+                    os.path.dirname(__file__), 'prompts/resolve/basic-with-tests.jinja'
+                )
+            else:
+                prompt_file = os.path.join(
+                    os.path.dirname(__file__), 'prompts/resolve/basic-followup.jinja'
+                )
+        with open(prompt_file, 'r') as f:
+            user_instructions_prompt_template = f.read()
+
+        with open(
+            prompt_file.replace('.jinja', '-conversation-instructions.jinja')
+        ) as f:
+            conversation_instructions_prompt_template = f.read()
+
+        base_domain = 'github.com'
+
+        self.output_dir = args.output_dir
+        self.issue_type = issue_type
+        self.issue_number = args.issue_number
+
+        self.workspace_base = self.build_workspace_base(
+            self.output_dir, self.issue_type, self.issue_number
+        )
+
+        self.max_iterations = args.max_iterations
+
+        self.app_config = self.update_openhands_config(
+            load_openhands_config(),
+            self.max_iterations,
+            self.workspace_base,
+            args.base_container_image,
+            args.runtime_container_image,
+            args.is_experimental,
+        )
+
+        self.owner = owner
+        self.repo = repo
+        self.platform = platform
+        self.user_instructions_prompt_template = user_instructions_prompt_template
+        self.conversation_instructions_prompt_template = (
+            conversation_instructions_prompt_template
+        )
+        self.repo_instruction = repo_instruction
+        self.comment_id = args.comment_id
+
+        factory = IssueHandlerFactory(
+            owner=self.owner,
+            repo=self.repo,
+            token=token,
+            username=username,
+            platform=self.platform,
+            base_domain=base_domain,
+            issue_type=self.issue_type,
+            llm_config=self.app_config.get_llm_config(),
+        )
+        self.issue_handler = factory.create()
 
         # Initialize values for custom resolver
 
@@ -91,6 +158,15 @@ class PRArenaIssueResolver(IssueResolver):
 
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
+        
+    async def complete_runtime(
+        self,
+        runtime: Runtime,
+        base_commit: str,
+    ) -> dict[str, Any]:
+        patch = await super().complete_runtime(runtime, base_commit)
+        runtime.close()
+        return patch
 
     async def resolve_issues_with_random_models(self):
         selected_llms = random.sample(self.llm_configs, 2)
@@ -316,22 +392,7 @@ class PRArenaIssueResolver(IssueResolver):
         """
         start_time = time.time()
         
-        issue_handler = self.issue_handler_factory()
-
-        # Load dataset
-        issues: list[Issue] = issue_handler.get_converted_issues(
-            issue_numbers=[self.issue_number], comment_id=self.comment_id
-        )
-
-        if not issues:
-            raise ValueError(
-                f'No issues found for issue number {self.issue_number}. Please verify that:\n'
-                f'1. The issue/PR #{self.issue_number} exists in the repository {self.owner}/{self.repo}\n'
-                f'2. You have the correct permissions to access it\n'
-                f'3. The repository name is spelled correctly'
-            )
-
-        issue = issues[0]
+        issue = self.extract_issue()
 
         if self.comment_id is not None:
             if (
@@ -365,7 +426,7 @@ class PRArenaIssueResolver(IssueResolver):
                 [
                     'git',
                     'clone',
-                    issue_handler.get_clone_url(),
+                    self.issue_handler.get_clone_url(),
                     f'{self.output_dir}/repo',
                 ]
             ).decode('utf-8')
@@ -443,7 +504,7 @@ class PRArenaIssueResolver(IssueResolver):
             output = await self.process_issue(
                 issue,
                 base_commit,
-                issue_handler,
+                self.issue_handler,
                 reset_logger,
             )
 
