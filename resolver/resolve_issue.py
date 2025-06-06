@@ -30,7 +30,6 @@ from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.resolver_output import ResolverOutput
 
 from openhands.resolver.issue_resolver import IssueResolver
-from openhands.resolver.resolver_output import ResolverOutput
 from openhands.core.config import LLMConfig
 from openhands.runtime import Runtime
 
