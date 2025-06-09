@@ -19,6 +19,7 @@ openhands-ai = { git = "https://github.com/All-Hands-AI/OpenHands.git", branch =
 pandas = "^2.2.3"
 pytest = "^8.3.3"
 firebase-admin = "^6.6.0"
+tree_sitter_languages = "^1.9.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"
