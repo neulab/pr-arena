@@ -141,6 +141,7 @@ class PRArenaIssueResolver(IssueResolver):
             raise ValueError("No LLM models provided in either the arguments or environment variables.")
         
 
+        self.token = token
         Secrets.TOKEN = self.token
         api_key = Secrets.get_api_key()
         self.llm_configs = []
