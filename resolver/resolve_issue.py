@@ -501,6 +501,10 @@ class PRArenaIssueResolver(IssueResolver):
                     .decode('utf-8')
                     .strip()
                 )
+            
+            logger.info(
+                f'Issue Resolve - Using base commit {base_commit} for issue {issue.number}\nOutput successfully written to {output_file}'
+            )
 
             output = await self.process_issue(
                 issue,
