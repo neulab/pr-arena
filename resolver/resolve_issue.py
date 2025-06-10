@@ -71,16 +71,10 @@ class PRArenaIssueResolver(IssueResolver):
         issue_type = args.issue_type
 
         # Read the prompt template
-        prompt_file = args.prompt_file
-        if prompt_file is None:
-            if issue_type == 'issue':
-                prompt_file = os.path.join(
-                    os.path.dirname(__file__), 'prompts/resolve/basic-with-tests.jinja'
-                )
-            else:
-                prompt_file = os.path.join(
-                    os.path.dirname(__file__), 'prompts/resolve/basic-followup.jinja'
-                )
+        prompt_file = os.path.join(
+            os.path.dirname(__file__), 'prompts/resolve/basic-with-tests.jinja'
+        )
+        
         with open(prompt_file, 'r') as f:
             user_instructions_prompt_template = f.read()
 
