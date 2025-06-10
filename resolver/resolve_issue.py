@@ -391,6 +391,7 @@ class PRArenaIssueResolver(IssueResolver):
             reset_logger: Whether to reset the logger for multiprocessing.
         """
         start_time = time.time()
+        output = None
         
         issue = self.extract_issue()
 
@@ -469,7 +470,7 @@ class PRArenaIssueResolver(IssueResolver):
         logger.info(
             f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model {model_name}, max iterations {self.max_iterations}.'
         )
-
+        
         try:
             # checkout to pr branch if needed
             if self.issue_type == 'pr':
@@ -514,7 +515,9 @@ class PRArenaIssueResolver(IssueResolver):
             end_time = time.time()
             duration = end_time - start_time
             logger.info(f"Total time taken: {duration} seconds")
-            output.duration = duration
+            
+            if output is not None:  # Check if output was created
+                output.duration = duration
             
             return output
     
