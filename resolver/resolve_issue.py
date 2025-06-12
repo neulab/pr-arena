@@ -24,11 +24,10 @@ from resolver.send_pull_request import (
     make_commit
 )
 
-from pydantic import Field, SecretStr
+from pydantic import SecretStr
 
 import openhands
 from openhands.core.logger import openhands_logger as logger
-from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.resolver_output import ResolverOutput
 
 from openhands.resolver.issue_resolver import IssueResolver
@@ -36,8 +35,7 @@ from openhands.runtime import Runtime
 
 from openhands.integrations.service_types import ProviderType
 from openhands.resolver.issue_handler_factory import IssueHandlerFactory
-from openhands.core.config.utils import load_openhands_config
-from openhands.core.config.llm_config import LLMConfig
+from openhands.core.config import AgentConfig, AppConfig, LLMConfig, SandboxConfig
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -50,6 +48,14 @@ class PRArenaIssueResolver(IssueResolver):
 
     def __init__(self, args: Namespace):
         # super().__init__(args) # Most shared arguments are processed by parent class
+        
+        # Setup and validate container images
+        self.sandbox_config = self._setup_sandbox_config(
+            args.base_container_image,
+            args.runtime_container_image,
+            args.is_experimental,
+        )
+        
         parts = args.selected_repo.rsplit('/', 1)
         if len(parts) < 2:
             raise ValueError('Invalid repository format. Expected owner/repo')
@@ -65,6 +71,48 @@ class PRArenaIssueResolver(IssueResolver):
 
         platform = ProviderType.GITHUB
 
+        api_key = args.llm_api_key or os.environ['LLM_API_KEY']
+        base_url = args.llm_base_url or os.environ.get('LLM_BASE_URL', None)
+        api_version = os.environ.get('LLM_API_VERSION', None)
+        llm_num_retries = int(os.environ.get('LLM_NUM_RETRIES', '4'))
+        llm_retry_min_wait = int(os.environ.get('LLM_RETRY_MIN_WAIT', '5'))
+        llm_retry_max_wait = int(os.environ.get('LLM_RETRY_MAX_WAIT', '30'))
+        llm_retry_multiplier = int(os.environ.get('LLM_RETRY_MULTIPLIER', 2))
+        llm_timeout = int(os.environ.get('LLM_TIMEOUT', 0))
+        
+        # Initialize values for custom resolver
+
+        multiple_models = args.llm_models or os.environ["LLM_MODELS"]
+        if multiple_models:
+            model_names = [model.strip() for model in multiple_models.split(",")]
+        else:
+            raise ValueError("No LLM models provided in either the arguments or environment variables.")
+        
+        selected_models = random.sample(multiple_models, 2)
+        self.llm_configs = []
+        
+        for model in selected_models:
+            # Create LLMConfig instance
+            llm_config = LLMConfig(
+                model=model,
+                api_key=SecretStr(api_key) if api_key else None,
+                base_url=base_url,
+                num_retries=llm_num_retries,
+                retry_min_wait=llm_retry_min_wait,
+                retry_max_wait=llm_retry_max_wait,
+                retry_multiplier=llm_retry_multiplier,
+                timeout=llm_timeout,
+            )
+            self.llm_configs.append(llm_config)
+            
+            # Only set api_version if it was explicitly provided, otherwise let LLMConfig handle it
+            if api_version is not None:
+                llm_config.api_version = api_version
+        
+        self.token = token
+        self.username = username
+        Secrets.TOKEN = self.token
+        
         repo_instruction = None
         if args.repo_instruction_file:
             with open(args.repo_instruction_file, 'r') as f:
@@ -85,74 +133,20 @@ class PRArenaIssueResolver(IssueResolver):
         ) as f:
             conversation_instructions_prompt_template = f.read()
 
-        self.output_dir = args.output_dir
-        self.issue_type = issue_type
-        self.issue_number = args.issue_number
-
-        self.workspace_base = self.build_workspace_base(
-            self.output_dir, self.issue_type, self.issue_number
-        )
-
-        self.max_iterations = args.max_iterations
-
-        # # Moved to the function resolve_issues_with_random_models:
-        # # Load the OpenHands configuration before each issue resolution
-        # self.app_config = self.update_openhands_config(
-        #     load_openhands_config(),
-        #     self.max_iterations,
-        #     self.workspace_base,
-        #     args.base_container_image,
-        #     args.runtime_container_image,
-        #     args.is_experimental,
-        # )
-        
-        # # Moved factory & issue handler as well.
-        # factory = IssueHandlerFactory(
-        #     owner=self.owner,
-        #     repo=self.repo,
-        #     token=token,
-        #     username=username,
-        #     platform=self.platform,
-        #     base_domain=base_domain,
-        #     issue_type=self.issue_type,
-        #     llm_config=self.app_config.get_llm_config(),
-        # )
-        # self.issue_handler = factory.create()
-
         self.owner = owner
         self.repo = repo
         self.platform = platform
+        self.max_iterations = args.max_iterations
+        self.output_dir = args.output_dir
+        # self.llm_config = llm_config
         self.user_instructions_prompt_template = user_instructions_prompt_template
         self.conversation_instructions_prompt_template = (
             conversation_instructions_prompt_template
         )
+        self.issue_type = issue_type
         self.repo_instruction = repo_instruction
+        self.issue_number = args.issue_number
         self.comment_id = args.comment_id
-
-        # Initialize values for custom resolver
-
-        multiple_models = args.llm_models or os.environ["LLM_MODELS"]
-        if multiple_models:
-            model_names = [model.strip() for model in multiple_models.split(",")]
-        else:
-            raise ValueError("No LLM models provided in either the arguments or environment variables.")
-        
-
-        self.token = token
-        self.username = username
-        Secrets.TOKEN = self.token
-        api_key = Secrets.get_api_key()
-        self.llm_configs = []
-
-        for model in model_names:
-            self.llm_configs.append(
-                LLMConfig(
-                    model=model,
-                    api_key=SecretStr(api_key),
-                    base_url=args.llm_base_url or os.environ.get("LLM_BASE_URL", None),
-                )
-            )
-
 
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
@@ -167,20 +161,8 @@ class PRArenaIssueResolver(IssueResolver):
         return patch
 
     async def resolve_issues_with_random_models(self):
-        selected_llms = random.sample(self.llm_configs, 2)
-        
-        first_llm_config = selected_llms[0] # Set first config
-        self.app_config = self.update_openhands_config(
-            load_openhands_config(),
-            self.max_iterations,
-            self.workspace_base,
-            None,
-            None,
-            False
-        )
-        # self.app_config.set_llm_config(self.llm_config, "first")
-        self.app_config.llms["first"] = first_llm_config
-        self.llm_config = first_llm_config
+        llm_config = self.llm_configs[0]
+        self.llm_config = llm_config
         
         factory = IssueHandlerFactory(
             owner=self.owner,
@@ -190,28 +172,18 @@ class PRArenaIssueResolver(IssueResolver):
             platform=self.platform,
             base_domain='github.com',
             issue_type=self.issue_type,
-            # llm_config=self.app_config.get_llm_config("first"),
-            llm_config=first_llm_config,
+            llm_config=llm_config,
         )
         self.issue_handler = factory.create()
+        
         resolver_output_1: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
         resolver_output_1 = CustomResolverOutput(**resolver_output_1.model_dump(),
                                                  model=self.llm_config.model.split("/")[-1])
 
 
-        second_llm_config = selected_llms[1] # Set second config
-        self.app_config = self.update_openhands_config(
-            load_openhands_config(),
-            self.max_iterations,
-            self.workspace_base,
-            None,
-            None,
-            False
-        )
-        # self.app_config.set_llm_config(self.llm_config, "second")
-        self.app_config.llms["first"] = second_llm_config
-        self.llm_config = second_llm_config
+        llm_config = self.llm_configs[1]
+        self.llm_config = llm_config
         
         factory = IssueHandlerFactory(
             owner=self.owner,
@@ -221,10 +193,10 @@ class PRArenaIssueResolver(IssueResolver):
             platform=self.platform,
             base_domain='github.com',
             issue_type=self.issue_type,
-            # llm_config=self.app_config.get_llm_config("second"),
-            llm_config=second_llm_config,
+            llm_config=llm_config,
         )
         self.issue_handler = factory.create()
+        
         resolver_output_2: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
         resolver_output_2 = CustomResolverOutput(**resolver_output_2.model_dump(),
