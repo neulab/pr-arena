@@ -15,7 +15,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.12"
-openhands-ai = { git = "https://github.com/All-Hands-AI/OpenHands.git", branch = "main" }
+openhands-ai = { git = "https://github.com/All-Hands-AI/OpenHands.git", branch = "cfa2725" }
 pandas = "^2.2.3"
 pytest = "^8.3.3"
 firebase-admin = "^6.6.0"
