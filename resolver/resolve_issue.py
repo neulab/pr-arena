@@ -32,6 +32,7 @@ from openhands.resolver.resolver_output import ResolverOutput
 
 from openhands.resolver.issue_resolver import IssueResolver
 from openhands.runtime import Runtime
+from openhands.resolver.interfaces.issue import Issue
 
 from openhands.integrations.service_types import ProviderType
 from openhands.resolver.issue_handler_factory import IssueHandlerFactory
@@ -412,7 +413,20 @@ class PRArenaIssueResolver(IssueResolver):
         start_time = time.time()
         output = None
         
-        issue = self.extract_issue()
+        # Load dataset
+        issues: list[Issue] = self.issue_handler.get_converted_issues(
+            issue_numbers=[self.issue_number], comment_id=self.comment_id
+        )
+
+        if not issues:
+            raise ValueError(
+                f'No issues found for issue number {self.issue_number}. Please verify that:\n'
+                f'1. The issue/PR #{self.issue_number} exists in the repository {self.owner}/{self.repo}\n'
+                f'2. You have the correct permissions to access it\n'
+                f'3. The repository name is spelled correctly'
+            )
+
+        issue = issues[0]
 
         if self.comment_id is not None:
             if (
