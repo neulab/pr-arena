@@ -32,7 +32,6 @@ from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.resolver_output import ResolverOutput
 
 from openhands.resolver.issue_resolver import IssueResolver
-from openhands.core.config import LLMConfig
 from openhands.runtime import Runtime
 
 from openhands.integrations.service_types import ProviderType
@@ -170,7 +169,7 @@ class PRArenaIssueResolver(IssueResolver):
     async def resolve_issues_with_random_models(self):
         selected_llms = random.sample(self.llm_configs, 2)
         
-        self.llm_config = selected_llms[0] # Set first config
+        first_llm_config = selected_llms[0] # Set first config
         self.app_config = self.update_openhands_config(
             load_openhands_config(),
             self.max_iterations,
@@ -179,7 +178,9 @@ class PRArenaIssueResolver(IssueResolver):
             None,
             False
         )
-        self.app_config.set_llm_config(self.llm_config, "first")
+        # self.app_config.set_llm_config(self.llm_config, "first")
+        self.app_config.llms["first"] = first_llm_config
+        self.llm_config = first_llm_config
         
         factory = IssueHandlerFactory(
             owner=self.owner,
@@ -189,7 +190,8 @@ class PRArenaIssueResolver(IssueResolver):
             platform=self.platform,
             base_domain='github.com',
             issue_type=self.issue_type,
-            llm_config=self.app_config.get_llm_config("first"),
+            # llm_config=self.app_config.get_llm_config("first"),
+            llm_config=first_llm_config,
         )
         self.issue_handler = factory.create()
         resolver_output_1: CustomResolverOutput = await self.resolve_issue()
@@ -198,7 +200,7 @@ class PRArenaIssueResolver(IssueResolver):
                                                  model=self.llm_config.model.split("/")[-1])
 
 
-        self.llm_config = selected_llms[1] # Set second config
+        second_llm_config = selected_llms[1] # Set second config
         self.app_config = self.update_openhands_config(
             load_openhands_config(),
             self.max_iterations,
@@ -207,7 +209,9 @@ class PRArenaIssueResolver(IssueResolver):
             None,
             False
         )
-        self.app_config.set_llm_config(self.llm_config, "second")
+        # self.app_config.set_llm_config(self.llm_config, "second")
+        self.app_config.llms["first"] = second_llm_config
+        self.llm_config = second_llm_config
         
         factory = IssueHandlerFactory(
             owner=self.owner,
@@ -217,7 +221,8 @@ class PRArenaIssueResolver(IssueResolver):
             platform=self.platform,
             base_domain='github.com',
             issue_type=self.issue_type,
-            llm_config=self.app_config.get_llm_config("second"),
+            # llm_config=self.app_config.get_llm_config("second"),
+            llm_config=second_llm_config,
         )
         self.issue_handler = factory.create()
         resolver_output_2: CustomResolverOutput = await self.resolve_issue()
