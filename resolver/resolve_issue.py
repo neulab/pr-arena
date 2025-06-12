@@ -88,7 +88,7 @@ class PRArenaIssueResolver(IssueResolver):
         else:
             raise ValueError("No LLM models provided in either the arguments or environment variables.")
         
-        selected_models = random.sample(multiple_models, 2)
+        selected_models = random.sample(model_names, 2)
         self.llm_configs = []
         
         for model in selected_models:
