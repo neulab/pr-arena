@@ -136,7 +136,7 @@ jobs:
         id: post_webpage
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PAT_TOKEN }}
+          github-token: ${{ inputs.pat_token }}
           script: |
             const issueNumber = ${{ inputs.issue_number }};
             const repo = context.repo.repo
