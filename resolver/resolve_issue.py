@@ -82,6 +82,9 @@ class PRArenaIssueResolver(IssueResolver):
         llm_timeout = int(os.environ.get('LLM_TIMEOUT', 0))
         
         # Initialize values for custom resolver
+        self.token = token
+        self.username = username
+        Secrets.TOKEN = self.token
 
         multiple_models = args.llm_models or os.environ["LLM_MODELS"]
         if multiple_models:
@@ -96,7 +99,7 @@ class PRArenaIssueResolver(IssueResolver):
             # Create LLMConfig instance
             llm_config = LLMConfig(
                 model=model,
-                api_key=SecretStr(api_key) if api_key else None,
+                api_key=Secrets.get_api_key(),
                 base_url=base_url,
                 num_retries=llm_num_retries,
                 retry_min_wait=llm_retry_min_wait,
@@ -109,10 +112,6 @@ class PRArenaIssueResolver(IssueResolver):
             # Only set api_version if it was explicitly provided, otherwise let LLMConfig handle it
             if api_version is not None:
                 llm_config.api_version = api_version
-        
-        self.token = token
-        self.username = username
-        Secrets.TOKEN = self.token
         
         repo_instruction = None
         if args.repo_instruction_file:
