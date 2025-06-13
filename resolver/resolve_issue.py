@@ -178,8 +178,10 @@ class PRArenaIssueResolver(IssueResolver):
         
         resolver_output_1: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
-        resolver_output_1 = CustomResolverOutput(**resolver_output_1.model_dump(),
-                                                 model=self.llm_config.model.split("/")[-1])
+        
+        resolver_output_1_dict = resolver_output_1.model_dump()
+        resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
+        resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
 
 
         llm_config = self.llm_configs[1]
@@ -199,8 +201,10 @@ class PRArenaIssueResolver(IssueResolver):
         
         resolver_output_2: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
-        resolver_output_2 = CustomResolverOutput(**resolver_output_2.model_dump(),
-                                                 model=self.llm_config.model.split("/")[-1])
+        
+        resolver_output_2_dict = resolver_output_2.model_dump()
+        resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
+        resolver_output_2 = CustomResolverOutput(**resolver_output_2_dict)
 
 
         # TODO: Send commit hash to the firebase.
