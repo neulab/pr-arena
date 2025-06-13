@@ -597,13 +597,6 @@ class PRArenaIssueResolver(IssueResolver):
                 patch_dir=patched_repo_dir,
                 pr_type=pr_type,
             )
-            
-            resolver_output.success = False
-            resolver_output.success_explanation = "Git patch applied successfully."
-            # logger.info(f"[DEBUG] Success Patched Repo Dir: {patched_repo_dir}")
-        else:
-            resolver_output.success = False
-            resolver_output.success_explanation = "No git patch found."
         
         resolver_output.branch_name = branch_name
         resolver_output.default_branch = default_branch
