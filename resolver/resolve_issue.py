@@ -72,7 +72,6 @@ class PRArenaIssueResolver(IssueResolver):
 
         platform = ProviderType.GITHUB
 
-        api_key = args.llm_api_key
         base_url = args.llm_base_url
         api_version = os.environ.get('LLM_API_VERSION', None)
         llm_num_retries = int(os.environ.get('LLM_NUM_RETRIES', '4'))
@@ -139,8 +138,6 @@ class PRArenaIssueResolver(IssueResolver):
         self.repo = repo
         self.platform = platform
         self.max_iterations = args.max_iterations
-        self.output_dir = args.output_dir
-        # self.llm_config = llm_config
         self.user_instructions_prompt_template = user_instructions_prompt_template
         self.conversation_instructions_prompt_template = (
             conversation_instructions_prompt_template
@@ -177,8 +174,9 @@ class PRArenaIssueResolver(IssueResolver):
             llm_config=llm_config,
         )
         self.issue_handler = factory.create()
+        self.output_dir = 'output1'  # Set output directory for the first model
         
-        resolver_output_1: CustomResolverOutput = await self.resolve_issue(output_dir='output1')
+        resolver_output_1: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
         
         resolver_output_1_dict = resolver_output_1.model_dump()
@@ -200,8 +198,9 @@ class PRArenaIssueResolver(IssueResolver):
             llm_config=llm_config,
         )
         self.issue_handler = factory.create()
+        self.output_dir = 'output2'
         
-        resolver_output_2: CustomResolverOutput = await self.resolve_issue(output_dir='output2')
+        resolver_output_2: CustomResolverOutput = await self.resolve_issue()
         logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
         
         resolver_output_2_dict = resolver_output_2.model_dump()
@@ -408,7 +407,6 @@ class PRArenaIssueResolver(IssueResolver):
     
     async def resolve_issue(
         self,
-        output_dir: str = 'output',
         reset_logger: bool = False,
     ) -> CustomResolverOutput:
         """Resolve a single issue.
@@ -454,21 +452,21 @@ class PRArenaIssueResolver(IssueResolver):
         # TEST METADATA
         model_name = self.llm_config.model.split('/')[-1]
 
-        pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(os.path.join(output_dir, 'infer_logs')).mkdir(
+        pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(os.path.join(self.output_dir, 'infer_logs')).mkdir(
             parents=True, exist_ok=True
         )
-        logger.info(f'Using output directory: {output_dir}')
+        logger.info(f'Using output directory: {self.output_dir}')
 
         # checkout the repo
-        repo_dir = os.path.join(output_dir, 'repo')
+        repo_dir = os.path.join(self.output_dir, 'repo')
         if not os.path.exists(repo_dir):
             checkout_output = subprocess.check_output(  # noqa: ASYNC101
                 [
                     'git',
                     'clone',
                     self.issue_handler.get_clone_url(),
-                    f'{output_dir}/repo',
+                    f'{self.output_dir}/repo',
                 ]
             ).decode('utf-8')
             if 'fatal' in checkout_output:
@@ -493,7 +491,7 @@ class PRArenaIssueResolver(IssueResolver):
         #             self.repo_instruction = f.read()
 
         # OUTPUT FILE
-        output_file = os.path.join(output_dir, 'output.jsonl')
+        output_file = os.path.join(self.output_dir, 'output.jsonl')
         logger.info(f'Writing output to {output_file}')
 
         # Check if this issue was already processed
