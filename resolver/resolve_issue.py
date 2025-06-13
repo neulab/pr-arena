@@ -403,7 +403,7 @@ class PRArenaIssueResolver(IssueResolver):
     async def resolve_issue(
         self,
         reset_logger: bool = False,
-    ) -> ResolverOutput:
+    ) -> CustomResolverOutput:
         """Resolve a single issue.
 
         Args:
@@ -411,6 +411,7 @@ class PRArenaIssueResolver(IssueResolver):
         """
         start_time = time.time()
         output = None
+        customOutput = None
         
         # Load dataset
         issues: list[Issue] = self.issue_handler.get_converted_issues(
@@ -544,6 +545,8 @@ class PRArenaIssueResolver(IssueResolver):
                 self.issue_handler,
                 reset_logger,
             )
+            
+            customOutput = CustomResolverOutput(**output.model_dump())
 
         finally:
             logger.info('Finished.')
@@ -552,11 +555,11 @@ class PRArenaIssueResolver(IssueResolver):
             duration = end_time - start_time
             logger.info(f"Total time taken: {duration} seconds")
             
-            if output is not None:  # Check if output was created
-                output.duration = duration
+            if customOutput is not None:  # Check if customOutput was created
+                customOutput.duration = duration
             
-            logger.info(f"Output: {output}")
-            return output
+            logger.info(f"Output: {customOutput}")
+            return customOutput
     
     
     def get_new_commit_hash(
