@@ -92,7 +92,9 @@ class PRArenaIssueResolver(IssueResolver):
         else:
             raise ValueError("No LLM models provided in either the arguments or environment variables.")
         
-        selected_models = random.sample(model_names, 2)
+        # selected_models = random.sample(model_names, 2)
+        # Debug purpose ! TODO: Remove this line
+        selected_models = model_names
         self.llm_configs = []
         
         for model in selected_models:
@@ -176,7 +178,7 @@ class PRArenaIssueResolver(IssueResolver):
         )
         self.issue_handler = factory.create()
         
-        resolver_output_1: CustomResolverOutput = await self.resolve_issue()
+        resolver_output_1: CustomResolverOutput = await self.resolve_issue(output_dir='output1')
         logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
         
         resolver_output_1_dict = resolver_output_1.model_dump()
@@ -199,7 +201,7 @@ class PRArenaIssueResolver(IssueResolver):
         )
         self.issue_handler = factory.create()
         
-        resolver_output_2: CustomResolverOutput = await self.resolve_issue()
+        resolver_output_2: CustomResolverOutput = await self.resolve_issue(output_dir='output2')
         logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
         
         resolver_output_2_dict = resolver_output_2.model_dump()
@@ -406,6 +408,7 @@ class PRArenaIssueResolver(IssueResolver):
     
     async def resolve_issue(
         self,
+        output_dir: str = 'output',
         reset_logger: bool = False,
     ) -> CustomResolverOutput:
         """Resolve a single issue.
@@ -451,21 +454,21 @@ class PRArenaIssueResolver(IssueResolver):
         # TEST METADATA
         model_name = self.llm_config.model.split('/')[-1]
 
-        pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(os.path.join(self.output_dir, 'infer_logs')).mkdir(
+        pathlib.Path(output_dir).mkdir(parents=True, exist_ok=True)
+        pathlib.Path(os.path.join(output_dir, 'infer_logs')).mkdir(
             parents=True, exist_ok=True
         )
-        logger.info(f'Using output directory: {self.output_dir}')
+        logger.info(f'Using output directory: {output_dir}')
 
         # checkout the repo
-        repo_dir = os.path.join(self.output_dir, 'repo')
+        repo_dir = os.path.join(output_dir, 'repo')
         if not os.path.exists(repo_dir):
             checkout_output = subprocess.check_output(  # noqa: ASYNC101
                 [
                     'git',
                     'clone',
                     self.issue_handler.get_clone_url(),
-                    f'{self.output_dir}/repo',
+                    f'{output_dir}/repo',
                 ]
             ).decode('utf-8')
             if 'fatal' in checkout_output:
@@ -490,7 +493,7 @@ class PRArenaIssueResolver(IssueResolver):
         #             self.repo_instruction = f.read()
 
         # OUTPUT FILE
-        output_file = os.path.join(self.output_dir, 'output.jsonl')
+        output_file = os.path.join(output_dir, 'output.jsonl')
         logger.info(f'Writing output to {output_file}')
 
         # Check if this issue was already processed
