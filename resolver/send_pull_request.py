@@ -1,11 +1,14 @@
 import argparse
 import json
+from typing import Iterable
 import os
 import shutil
 import subprocess
 
 import jinja2
 from pydantic import SecretStr
+
+from resolver.resolver_output import CustomResolverOutput
 
 import openhands
 from openhands.core.config import LLMConfig
@@ -15,12 +18,19 @@ from openhands.llm.llm import LLM
 from openhands.resolver.interfaces.github import GithubIssueHandler
 from openhands.resolver.interfaces.issue import Issue
 from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue
-from openhands.resolver.io_utils import (
-    load_single_resolver_output,
-)
 from openhands.resolver.patching import apply_diff, parse_patch
-from openhands.resolver.resolver_output import ResolverOutput
 
+def load_all_resolver_outputs(output_jsonl: str) -> Iterable[CustomResolverOutput]:
+    with open(output_jsonl, 'r') as f:
+        for line in f:
+            yield CustomResolverOutput.model_validate(json.loads(line))
+
+
+def load_single_resolver_output(output_jsonl: str, issue_number: int) -> CustomResolverOutput:
+    for resolver_output in load_all_resolver_outputs(output_jsonl):
+        if resolver_output.issue.number == issue_number:
+            return resolver_output
+    raise ValueError(f'Issue number {issue_number} not found in {output_jsonl}')
 
 def apply_patch(repo_dir: str, patch: str) -> None:
     """Apply a patch to a repository.
@@ -224,7 +234,7 @@ def send_pull_request(
     token: str,
     username: str | None,
     platform: ProviderType,
-    resolver_output: ResolverOutput,
+    resolver_output: CustomResolverOutput,
     pr_type: str,
     fork_owner: str | None = None,
     additional_message: str | None = None,
@@ -326,7 +336,7 @@ def update_existing_pull_request(
     token: str,
     username: str | None,
     platform: ProviderType,
-    resolver_output: ResolverOutput,
+    resolver_output: CustomResolverOutput,
     llm_config: LLMConfig,
     comment_message: str | None = None,
     additional_message: str | None = None,
@@ -413,7 +423,7 @@ def update_existing_pull_request(
 
 def process_single_issue(
     output_dir: str,
-    resolver_output: ResolverOutput,
+    resolver_output: CustomResolverOutput,
     token: str,
     username: str,
     platform: ProviderType,

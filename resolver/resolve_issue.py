@@ -240,12 +240,12 @@ class PRArenaIssueResolver(IssueResolver):
         
         # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
         # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
-        self.get_new_commit_hash(
+        await self.get_new_commit_hash(
             output_dir="output1",
             resolver_output=resolved_output_1,
             pr_type=pr_type
         )
-        self.get_new_commit_hash(
+        await self.get_new_commit_hash(
             output_dir="output2",
             resolver_output=resolved_output_2,
             pr_type=pr_type
@@ -567,10 +567,10 @@ class PRArenaIssueResolver(IssueResolver):
             return customOutput
     
     
-    def get_new_commit_hash(
+    async def get_new_commit_hash(
         self,
         output_dir,
-        resolver_output: ResolverOutput,
+        resolver_output: CustomResolverOutput,
         pr_type: str
     ) -> None:
         # 1) initialize_repo
@@ -642,8 +642,8 @@ class PRArenaIssueResolver(IssueResolver):
         base_url = f"https://api.github.com/repos/{self.owner}/{self.repo}"
 
         # Create a new branch name
-        base_branch_name = f"openhands-fix-issue-{self.issue_number}-try1"
-        branch_name = base_branch_name
+        base_branch_name = f"openhands-fix-issue-{self.issue_number}"
+        branch_name = base_branch_name + "-try1"
         attempt = 1
 
         # Ensure the branch doesn't already exist on the remote
