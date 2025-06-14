@@ -347,7 +347,7 @@ class PRArenaIssueResolver(IssueResolver):
                     "modelName": resolved_output_2.model,
                     "commit_hash": resolved_output_2.commit_hash,
                     "agent_code": resolved_output_2.git_patch if resolved_output_2.git_patch else "",
-                    "duration": resolved_output_1.duration if resolved_output_1.duration else None
+                    "duration": resolved_output_2.duration if resolved_output_2.duration else None
                 }
             },
             "winner": None,  # No winner determined yet
