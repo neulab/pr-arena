@@ -98,7 +98,6 @@ async def get_selected_model_number (uuid: str, owner: str, repo: str, issue_num
     def on_snapshot(doc_snapshot, changes, read_time):
         for doc in doc_snapshot:
             doc_data = doc.to_dict()
-            logger.info(f"Change detected in issue_collection - {uuid}: {doc_data}")
 
             # Check for the winner field
             winner = doc_data.get("winner")
@@ -132,17 +131,55 @@ async def get_selected_model_number (uuid: str, owner: str, repo: str, issue_num
                 # Also update the user_collection with the choice
                 try:
                     # Get the user document using owner as document ID
-                    user_doc_ref = db.collection("user_collection").document(owner)
-                    user_doc_ref.update({
-                        f"selections.{uuid}.choice": winner,
-                        f"selections.{uuid}.selectedAt": firestore.SERVER_TIMESTAMP,
-                        f"selections.{uuid}.isLatest": True,
-                        "lastActive": firestore.SERVER_TIMESTAMP
-                    })
+                    user_doc_ref = db.collection("userdata_collection").document(owner)
+                    
+                    # First, get the current document to find other UUIDs
+                    user_doc = user_doc_ref.get()
+                    
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        selections = user_data.get("selections", {})
+                        
+                        # Create update data
+                        update_data = {}
+                        
+                        # Set all existing selections' isLatest to False
+                        for existing_uuid in selections.keys():
+                            update_data[f"selections.{existing_uuid}.isLatest"] = False
+                        
+                        # Set the current selection data
+                        update_data.update({
+                            f"selections.{uuid}.choice": winner,
+                            f"selections.{uuid}.selectedAt": firestore.SERVER_TIMESTAMP,
+                            f"selections.{uuid}.isLatest": True,
+                            "lastActive": firestore.SERVER_TIMESTAMP
+                        })
+                        
+                        # Apply all updates in one operation
+                        user_doc_ref.update(update_data)
+                        
+                        other_count = len([k for k in selections.keys() if k != uuid])
+                        logger.info(f"Updated user selection for {owner}: set {uuid} as latest, marked {other_count} others as not latest")
+                        
+                    else:
+                        # Document doesn't exist, create it
+                        user_doc_ref.set({
+                            "githubId": owner,
+                            "createdAt": firestore.SERVER_TIMESTAMP,
+                            "lastActive": firestore.SERVER_TIMESTAMP,
+                            "selections": {
+                                uuid: {
+                                    "choice": winner,
+                                    "selectedAt": firestore.SERVER_TIMESTAMP,
+                                    "isLatest": True
+                                }
+                            }
+                        })
+                        logger.info(f"Created new user document for {owner} with {uuid} as latest selection")
 
-                    logger.info(f"Updated user selection for {owner} in user_collection")
                 except Exception as e:
                     logger.error(f"Error updating user_collection: {str(e)}")
+                    logger.error(f"Details - Owner: {owner}, UUID: {uuid}, Winner: {winner}")
                 
                 logger.info(f"Model #{selected} is selected and saved to GitHub environment {github_env_path}.")
                 loop.call_soon_threadsafe(event.set)
@@ -156,10 +193,8 @@ async def get_selected_model_number (uuid: str, owner: str, repo: str, issue_num
     # Keep the listener alive
     try:
         await event.wait()
-        # logger.info("Event completed.")
     finally:
         doc_watch.unsubscribe()
-        # logger.info("Stopped listening for changes.")
 
 def load_firebase_config(config_json: str) -> dict:
     """Load Firebase configuration from JSON string."""

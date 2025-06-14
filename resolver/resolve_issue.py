@@ -274,9 +274,9 @@ class PRArenaIssueResolver(IssueResolver):
             "claude-3-7-sonnet-20250219": "model1",
             "gpt-4o-2024-05-13": "model2",
             "Meta-Llama-3.1-405B-Instruct": "model3",
-            "deepseek-chat": "model4",
+            "deepseek-v3": "model4",
             "gemini-2.5-pro-exp-03-25": "model5",
-            "deepseek-reasoner": "model6",
+            "deepseek-r1": "model6",
             "Meta-Llama-3.1-8B-Instruct": "model7",
             "o3-mini": "model8",
         }
