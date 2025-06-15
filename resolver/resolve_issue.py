@@ -183,7 +183,6 @@ class PRArenaIssueResolver(IssueResolver):
         resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
         resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
 
-
         llm_config = self.llm_configs[1]
         self.llm_config = llm_config
         
@@ -480,15 +479,14 @@ class PRArenaIssueResolver(IssueResolver):
         )
         logger.info(f'Base commit: {base_commit}')
 
-        # Commenting out because we are not using repo_instruction for PR-Arena
-        # if self.repo_instruction is None:
-        #     # Check for .openhands_instructions file in the workspace directory
-        #     openhands_instructions_path = os.path.join(
-        #         repo_dir, '.openhands_instructions'
-        #     )
-        #     if os.path.exists(openhands_instructions_path):
-        #         with open(openhands_instructions_path, 'r') as f:  # noqa: ASYNC101
-        #             self.repo_instruction = f.read()
+        if self.repo_instruction is None:
+            # Check for .openhands_instructions file in the workspace directory
+            openhands_instructions_path = os.path.join(
+                repo_dir, '.openhands_instructions'
+            )
+            if os.path.exists(openhands_instructions_path):
+                with open(openhands_instructions_path, 'r') as f:  # noqa: ASYNC101
+                    self.repo_instruction = f.read()
 
         # OUTPUT FILE
         output_file = os.path.join(self.output_dir, 'output.jsonl')
