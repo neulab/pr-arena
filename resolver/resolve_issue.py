@@ -15,6 +15,10 @@ import requests
 import httpx
 from enum import Enum
 
+# Apply daytona compatibility patch before any openhands imports
+from resolver.daytona_patch import apply_daytona_patch
+apply_daytona_patch()
+
 from resolver.secrets import Secrets
 from resolver.utils import load_firebase_config
 from resolver.resolver_output import CustomResolverOutput
