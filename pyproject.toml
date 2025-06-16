@@ -14,6 +14,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
+python = "^3.12,<3.14"
 openhands-ai = "0.40.0"
 firebase-admin = "^6.6.0"
 
