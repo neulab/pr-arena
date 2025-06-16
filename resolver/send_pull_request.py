@@ -8,6 +8,10 @@ import subprocess
 import jinja2
 from pydantic import SecretStr
 
+# Apply daytona compatibility patch before any openhands imports
+from resolver.daytona_patch import apply_daytona_patch
+apply_daytona_patch()
+
 from resolver.resolver_output import CustomResolverOutput
 
 import openhands
