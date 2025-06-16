@@ -12,7 +12,7 @@ You can use PR-Arena **without the API Key** for limited time!
 1. Go to the repository where the App is installed, or select repositories to install the App below at `Repository access`.
 2. Label an issue with `pr-arena` to trigger an automated fix.
   💡 Create or click a specific issue, and press the `Labels` on the sidebar on your right. Type `pr-arena` to label the issue.
-3. Wait for approximately 30 minutes (up to 40 minutes) for the agent to resolve the issue and open the Arena.
+3. Wait for approximately 10 minutes (up to 20 minutes) for the agent to resolve the issue and open the Arena.
 4. Click the link in the comment to enter the Arena, and choose preferred model.
 5. The selected fix is automatically generated as a Pull Request.
 
