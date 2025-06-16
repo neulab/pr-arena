@@ -11,7 +11,7 @@ from openhands.core.logger import openhands_logger as logger
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from secrets import Secrets
+from resolver.secrets import Secrets
 
 async def get_selected_model_number (uuid: str, owner: str, repo: str, issue_number: str, firebase_config: dict):
     """
