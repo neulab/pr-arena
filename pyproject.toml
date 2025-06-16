@@ -5,8 +5,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry]
 name = "resolver"
 version = "0.1.0"
-description = "PR Arena for OpenHands"
-authors = ["All Hands AI"]
+description = "PR-Arena: Arena Setting for GitHub Issue Resolver"
+authors = ["OpenHands"]
 license = "MIT"
 readme = "README.md"
 packages = [
