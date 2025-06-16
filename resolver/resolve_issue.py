@@ -287,7 +287,7 @@ class PRArenaIssueResolver(IssueResolver):
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
         model2_id = model_reference.get((cast(str, resolved_output_2.model)), "Model ID Not Found")
         
-        if not resolved_output_1.git_patch or not resolved_output_2.git_patch or resolved_output_1.success is False or resolved_output_2.success is False:
+        if not resolved_output_1.git_patch and not resolved_output_2.git_patch:
             issue_data = {
                 "repo_url": repo_url,
                 "issue_name": issue_name,
