@@ -1,87 +1,83 @@
-# PR Arena ⚔️
+# ⚔️ OpenHands PR Arena ⚔️
 
----
+*OpenHands PR Arena* is a competitive framework for coding assistants designed to evaluate and benchmark frontier large language models (LLMs) through paired pull request (PR) generations. It enables developers to compare multiple LLMs in real-world issue resolution tasks by presenting side-by-side code edits and allowing human users to select the better fix.
 
-## PR Arena (GitHub App)
-
-You can use PR-Arena **without the API Key** for limited time!
-
-### How to use
-0. Install the App on your GitHub repository.
-   - https://github.com/apps/openhands-pr-arena/installations/new
-1. Go to the repository where the App is installed, or select repositories to install the App below at `Repository access`.
-2. Label an issue with `pr-arena` to trigger an automated fix.
-  💡 Create or click a specific issue, and press the `Labels` on the sidebar on your right. Type `pr-arena` to label the issue.
-3. Wait for approximately 10 minutes (up to 20 minutes) for the agent to resolve the issue and open the Arena.
-4. Click the link in the comment to enter the Arena, and choose preferred model.
-5. The selected fix is automatically generated as a Pull Request.
-
-**⭐️ Every progress is updated via comment on issue. Please keep an eye on the comments!**
-**⭐️ OpenHands PR-Arena uses frontier models to resolve issues. Enjoy it for free for limited time!**
-
----
-
-### Privacy Notification
-1. The only codes we collect are the `git_diff` we make during resolving the issue. We **never** collect the whole codebase and **never** release the data.
-2. **Never** try to modify the workflow. The workflow will not be triggered once modified.
-3. The followings are what we collect about users, regarding the **Privacy**:
-  - User info: `owner`, `repo`, `repo URL`
-  - Model info: `user preference on model`, `duration of an attempt`
-  - Code info: `agent code (git_diffs)`, `commit hash` 
-
-Note that we **never** access user repository for codebase.
-
----
-
-###  Q&A
-**Q. How can I track the progress?**
-A. The agent automatically **comments on the issue** for the following steps:
-  - `⚙️ PR-Arena workflow has been triggered. The workflow will automatically timeout after 40 minutes if it takes too long. You can monitor the progress in the repository's Actions tab.`
-  - `OpenHands started fixing the issue! You can monitor the progress [here]`
-    - Step 1. OpenHands starts fixing the issue. Please wait up to 40 minutes until the next comment.
-  - `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link]`
-    - Step 2. The Arena is open. Enter the Arena via provided link and select the preferred fix.
-  - `PR has been created based on the fix you've selected. Please review the changes below.`
-    - Step 3. The PR has been created. You could merge the code via provided Pull Request link.
-
-**Q. What happens when error occurs?**
-A. The error message will show up in the issue comment whenever the error occurs. You can simply remove the label, wait for 5 seconds, and add it again to retry.
-
-There are three types of error that could occur.
-  - **[Agent side error]** If the agent is unable to fix the issue, the workflow terminates with the comment on issue:
-  `❌ PR-Arena has failed due to the agent error. Please remove the 'pr-arena' label and add it back to retry.`
-  - **[Workflow side error]** If the workflow encounters an error (e.g., when model itself encounters an error), the workflow terminates with the comment on issue:
-  `❌ PR-Arena encountered an error while ___. Please remove the 'pr-arena' label and add it back to retry.`
-  - **[Timeout error]** If the workflow exceeds 40 minutes, the workflow terminates with the comment on issue:
-  `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
-
-**Q. How long does the attempt take?**
-A. As the issue description gets complicated, the time it takes for the agent to resolve gets longer. Also, we found that some reasoning models consume longer time for each step. It should **take less than 40 minutes**, so please be patient!
-
----
-
-### Security & Permission (🔒)
-This GitHub App requires the following permissions:
-- **Read & Write Access** to Issues and Pull Requests to analyze issues and generate pull requests.
-- **Workflow Execution** to trigger automated fixes through GitHub Actions.
-- **Repository Contents Access** to apply necessary changes and submit pull requests.
-
-No user secrets or sensitive information are stored in repositories. All sensitive operations are securely handled via API.
-
----
-
-### Support
-📌 **Need Help?** Reach out via [Support](mailto:contact@all-hands.dev).
-
----
-
-## PR Arena (Manual)
-
-PR Arena is a coding assistant designed to evaluate and improve [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) through paired pull request (PR) generations. It enables developers to compare contributions from different LLMs such as GPT-4o, Llama, and more.
-
-This project is inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
+This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
 
 Follow the instruction below to setup the Arena setting for the OpenHands resolver.
+
+## Using the GitHub App
+
+**⭐️ You can use PR-Arena without the API Key for limited time!**
+
+### How to use
+1. Install OpenHands PR Arena to your GitHub repository.
+    - [Installation Link](https://github.com/apps/openhands-pr-arena/installations/new)
+2. Under `Repository access`, select the repositories you'd like to install the App to, then go to one of the installed repositories.
+3. Label an issue with `pr-arena` to trigger the automated fix:
+    - Open or create an issue, click `Labels` in the sidebar, and type `pr-arena`.
+4. Wait approximately 10 minutes (up to 20 minutes) for the agent to resolve the issue and open the Arena.
+5. Click the link in the comment to enter the Arena and choose your preferred model.
+6. The selected fix will be automatically submitted as a Pull Request.
+
+**⭐️ Progress is updated via comments on the issue—keep an eye on them!**
+
+**⭐️ OpenHands PR Arena uses frontier models to resolve issues—enjoy it for free for a limited time!**
+
+## Privacy Notification
+1. The only code we collect is the `git_diff` generated during issue resolution. We **never** collect the entire codebase and **never** release any user data.
+2. **Do not** modify the injected workflow. Once modified, it will no longer be triggered.
+3. Please use the App only on repositories where you consent to having your code processed by the LLM provider.
+4. The following metadata is collected for research purpose:
+    - User info: `owner`, `repo`, `repo URL`
+    - Model info: `user preference on model`, `duration of an attempt`
+    - Code info: `agent code (git_diffs)`, `commit hash` 
+
+⚠️ We **do not** access or store your full codebase at any point.
+
+##  Q&A
+**Q. How can I track the progress?**
+
+A. The agent will automatically **comment on the issue** at each stage of the process:
+  - `PR-Arena workflow triggered successfully! 🎉 ...`
+    - Step 0. Tips and instructions to guide you through the PR-Arena workflow.
+  - `OpenHands started fixing the issue! You can monitor the progress [here]`
+    - Step 1. OpenHands begins resolving the issue. Please wait 10 ~ 20 minutes for the next comment.
+  - `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link]`
+    - Step 2. The Arena is open. Click the link to review both fixes and choose your preferred one.
+  - `PR has been created based on the fix you've selected. Please review the changes.`
+    - Step 3. A pull request has been created. You can now review and merge it.
+
+**Q. What happens if an error occurs?**
+
+A. If an error occurs, the agent will comment on the issue with an appropriate message. You can retry by removing the `pr-arena` label, waiting 5 seconds, and adding it again.
+
+There are three types of errors:
+  - Agent side error:
+  `❌ PR-Arena has failed due to the agent error. Please remove the 'pr-arena' label and add it back to retry.`
+  - Workflow side error:
+  `❌ PR-Arena encountered an error while ___. Please remove the 'pr-arena' label and add it back to retry.`
+  - Timeout error:
+  `⏱️ PR-Arena workflow has been cancelled due to exceeding the 30-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
+
+**Q. How long does the process take?**
+
+A. The time depends on the complexity of the issue. Some reasoning models may take longer to process. Typically, it should take **less than 30 minutes**, so please be patient!
+
+## Security & Permission (🔒)
+This GitHub App requires the following permissions:
+- **Read & Write access** to Issues and Pull Requests — to analyze issues and generate PRs
+- **Workflow execution** — to trigger automated fixes via GitHub Actions
+- **Access to repository contents** — to apply code changes and submit pull requests
+
+No user secrets or sensitive information are stored in your repository. All sensitive operations are securely handled through our backend infrastructure.
+
+## Support
+
+This project is an extension of [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver). If you have any issues, please open an issue on this github repo, we're happy to help!
+Alternatively, you can [email us](mailto:contact@all-hands.dev) or join the [OpenHands Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2oikve2hu-UDxHeo8nsE69y6T7yFX_BA) and ask there.
+
+<!-- ---
 
 ## Using the GitHub Actions Workflow
 
@@ -100,7 +96,6 @@ This repository includes a GitHub Actions workflow that can automatically attemp
 5. Set up the following [GitHub secrets](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions) in your repository, or across your entire org if you want to only set ths once and use the resolver in multiple repositories:
    - `PAT_USERNAME`: The github username that you used to create the personal access token.
    - `PAT_TOKEN`: The personal access token for github.
-   <!-- - `LLM_MODELS`: The comma seperated LLM models to use (i.e. litellm_proxy/claude-3-5-sonnet-20241022,litellm_proxy/claude-3-5-sonnet-20240620,litellm_proxy/gpt-4o-2024-08-06,litellm_proxy/gpt-4o-2024-05-13,litellm_proxy/gemini-1.5-pro-002,litellm_proxy/gemini-1.5-flash-002,litellm_proxy/Llama-3.1-405b-instruct,litellm_proxy/Llama-3.1-70b-instruct,litellm_proxy/deepseek-chat) -->
    - `LLM_MODELS`: The comma seperated LLM models to use (i.e. litellm_proxy/neulab/claude-3-5-sonnet-20240620, litellm_proxy/neulab/gpt-4o-2024-05-13, litellm_proxy/neulab/gpt-4o-2024-08-06, litellm_proxy/neulab/gpt-4o-mini-2024-07-18, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo, litellm_proxy/neulab/Qwen/Qwen2-72B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo, litellm_proxy/neulab/NousResearch/Hermes-3-Llama-3.1-405B-Turbo, litellm_proxy/neulab/gemini/gemini-1.5-flash, litellm_proxy/neulab/gemini/gemini-1.5-pro, litellm_proxy/neulab/o1-preview, litellm_proxy/neulab/o1-mini, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-405B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-70B-Instruct, litellm_proxy/neulab/meta-llama/Meta-Llama-3.1-8B-Instruct, litellm_proxy/neulab/meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo, litellm_proxy/neulab/meta-llama/Llama-3.2-11B-Vision-Instruct-Turbo, litellm_proxy/neulab/deepseek-chat)
    - `LLM_API_KEY`: Your API key to access the LLM Router for the LLM service
    - `LLM_BASE_URL`: The base URL for the LLM API (i.e. https://llm-proxy.app.all-hands.dev)
@@ -120,3 +115,4 @@ The workflow will:
 
 This project is an extension of [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver). If you have any issues, please open an issue on this github repo, we're happy to help!
 Alternatively, you can [email us](mailto:contact@all-hands.dev) or join the [OpenHands Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2oikve2hu-UDxHeo8nsE69y6T7yFX_BA) and ask there.
+ -->
