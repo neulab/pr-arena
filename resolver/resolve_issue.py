@@ -20,7 +20,7 @@ from resolver.daytona_patch import apply_daytona_patch
 apply_daytona_patch()
 
 from resolver.secrets import Secrets
-from resolver.utils import load_firebase_config
+from resolver.utils import load_firebase_config, get_comprehensive_language_info
 from resolver.resolver_output import CustomResolverOutput
 from resolver.send_pull_request import (
     initialize_repo,
@@ -271,15 +271,26 @@ class PRArenaIssueResolver(IssueResolver):
         repo_url = f"https://github.com/{self.owner}/{self.repo}"
         issue_name = f"Issue #{self.issue_number}"
         
+        # Collect language information
+        language_info = get_comprehensive_language_info(
+            owner=self.owner,
+            repo=self.repo,
+            token=self.token,
+            git_patch_1=resolved_output_1.git_patch,
+            git_patch_2=resolved_output_2.git_patch
+        )
+        
+        logger.info(f"Language information collected: {language_info}")
+        
         model_reference = {
-            "claude-3-7-sonnet-20250219": "model1",
-            "gpt-4o-2024-05-13": "model2",
+            "claude-sonnet-4-20250514": "model1",
+            "gpt-4.1-2025-04-14": "model2",
             "Meta-Llama-3.1-405B-Instruct": "model3",
-            "deepseek-v3": "model4",
-            "gemini-2.5-pro-exp-03-25": "model5",
-            "deepseek-r1": "model6",
-            "Meta-Llama-3.1-8B-Instruct": "model7",
-            "o3-mini": "model8",
+            "o4-mini": "model4",
+            "gemini-2.5-pro-preview-05-06": "model5",
+            "Qwen-QwQ-32B-Preview": "model6",
+            "deepseek-v3": "model7",
+            "deepseek-r1": "model8",
         }
         
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
@@ -292,6 +303,7 @@ class PRArenaIssueResolver(IssueResolver):
                 "owner": self.owner,
                 "repo": self.repo,
                 "status": "failed",
+                "language_info": language_info,
                 "models": {
                     "modelA": {
                         "modelId": model1_id,
@@ -335,6 +347,7 @@ class PRArenaIssueResolver(IssueResolver):
             "owner": self.owner,
             "repo": self.repo,
             "status": "pending",  # Initial status is pending
+            "language_info": language_info,
             "models": {
                 "modelA": {
                     "modelId": model1_id,
@@ -377,6 +390,9 @@ class PRArenaIssueResolver(IssueResolver):
                     "language": "en",  # Default language
                     "isAnonymous": True,
                     "deduplicated": True,
+                    "programming_language": language_info.get("primary_language", "Unknown"),
+                    "repo_languages": language_info.get("repo_language_percentages", {}),
+                    "patch_languages": language_info.get("patch_language_percentages", {}),
                     "modelA": {
                         "modelId": model1_id,
                         "modelName": resolved_output_1.model

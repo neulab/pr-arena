@@ -21,7 +21,6 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 6. The selected fix will be automatically submitted as a Pull Request.
 
 **⭐️ Progress is updated via comments on the issue—keep an eye on them!**
-
 **⭐️ OpenHands PR Arena uses frontier models to resolve issues—enjoy it for free for a limited time!**
 
 ## Privacy Notification
@@ -75,7 +74,7 @@ No user secrets or sensitive information are stored in your repository. All sens
 ## Support
 
 This project is an extension of [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver). If you have any issues, please open an issue on this github repo, we're happy to help!
-Alternatively, you can [email us](mailto:contact@all-hands.dev) or join the [OpenHands Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2oikve2hu-UDxHeo8nsE69y6T7yFX_BA) and ask there.
+Alternatively, you can [email us](mailto:jiseungh@andrew.cmu.edu) or join the [OpenHands Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2oikve2hu-UDxHeo8nsE69y6T7yFX_BA) and ask there.
 
 <!-- ---
 
