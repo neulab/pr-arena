@@ -4,6 +4,13 @@
 
 This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
 
+![Demo](assets/img/demo.gif)
+
+### Maintainer
+[![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/jiseungh99?style=flat-square&logo=x&label=Jiseung%20Hong)](https://x.com/jiseungh99)
+[![GitHub](https://img.shields.io/badge/JiseungHong-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/JiseungHong)
+[![Website](https://img.shields.io/badge/wlqmfl.com-4285F4?style=flat-square&logo=google-chrome&logoColor=white)](https://wlqmfl.com)
+
 Follow the instruction below to setup the Arena setting for the OpenHands resolver.
 
 ## Using the GitHub App
@@ -11,6 +18,9 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 **⭐️ You can use PR-Arena without the API Key for limited time!**
 
 ### How to use
+
+**⭐️ Please watch the [guideline video](https://youtu.be/BV2Rj_zlk2g) that explains how to use the OpenHands PR Arena GitHub App!**
+
 1. Install OpenHands PR Arena to your GitHub repository.
     - [Installation Link](https://github.com/apps/openhands-pr-arena/installations/new)
 2. Under `Repository access`, select the repositories you'd like to install the App to, then go to one of the installed repositories.
