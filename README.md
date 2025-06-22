@@ -4,6 +4,8 @@
 
 This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
 
+Follow the instruction below to setup the Arena setting for the OpenHands resolver.
+
 ![Demo](assets/img/demo.gif)
 
 ### Maintainer
@@ -11,9 +13,7 @@ This project is built upon [OpenHands GitHub Backlog Resolver](https://github.co
 [![GitHub](https://img.shields.io/badge/JiseungHong-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/JiseungHong)
 [![Website](https://img.shields.io/badge/wlqmfl.com-4285F4?style=flat-square&logo=google-chrome&logoColor=white)](https://wlqmfl.com)
 
-Follow the instruction below to setup the Arena setting for the OpenHands resolver.
-
-## Using the GitHub App
+## How to Get Started with the OpenHands PR Arena GitHub App
 
 **⭐️ You can use PR-Arena without the API Key for limited time!**
 
