@@ -95,7 +95,8 @@ class PRArenaIssueResolver(IssueResolver):
         else:
             raise ValueError("No LLM models provided in either the arguments or environment variables.")
         
-        selected_models = random.sample(model_names, 2)
+        # selected_models = random.sample(model_names, 2)
+        selected_models = model_names
         self.llm_configs = []
         
         for model in selected_models:
@@ -126,6 +127,11 @@ class PRArenaIssueResolver(IssueResolver):
                 # Gemini models work better with simplified tool schemas
                 if hasattr(llm_config, 'simplify_tools'):
                     llm_config.simplify_tools = True
+            
+            if 'o4-mini' in model and hasattr(llm_config, 'top_p'):
+                delattr(llm_config, 'top_p')
+            
+            print("llm config:", llm_config)
             
             self.llm_configs.append(llm_config)
             
