@@ -99,6 +99,12 @@ class PRArenaIssueResolver(IssueResolver):
         self.llm_configs = []
         
         for model in selected_models:
+            # Determine if this model needs special parameter handling
+            needs_drop_params = (
+                'o4-mini' in model or
+                'gemini' in model.lower()
+            )
+            
             # Create LLMConfig instance
             llm_config = LLMConfig(
                 model=model,
@@ -109,7 +115,18 @@ class PRArenaIssueResolver(IssueResolver):
                 retry_max_wait=llm_retry_max_wait,
                 retry_multiplier=llm_retry_multiplier,
                 timeout=llm_timeout,
+                drop_params=needs_drop_params,
             )
+            
+            if 'gemini' in model.lower():
+                # Gemini models have specific limitations on tool formats
+                # Set additional Gemini-specific configurations if needed
+                if hasattr(llm_config, 'supports_function_calling'):
+                    llm_config.supports_function_calling = True
+                # Gemini models work better with simplified tool schemas
+                if hasattr(llm_config, 'simplify_tools'):
+                    llm_config.simplify_tools = True
+            
             self.llm_configs.append(llm_config)
             
             # Only set api_version if it was explicitly provided, otherwise let LLMConfig handle it
