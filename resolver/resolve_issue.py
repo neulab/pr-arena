@@ -129,7 +129,8 @@ class PRArenaIssueResolver(IssueResolver):
                     llm_config.simplify_tools = True
             
             if 'o4-mini' in model and hasattr(llm_config, 'top_p'):
-                delattr(llm_config, 'top_p')
+                # o4-mini models require top_p to be set to None
+                llm_config.top_p = None
             
             print("llm config:", llm_config)
             
