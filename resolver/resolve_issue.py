@@ -102,6 +102,7 @@ class PRArenaIssueResolver(IssueResolver):
         for model in selected_models:
             # Determine if this model needs special parameter handling
             needs_drop_params = (
+                'o1-mini' in model or
                 'o3-mini' in model or
                 'o4-mini' in model or
                 'gemini' in model.lower()
@@ -135,6 +136,10 @@ class PRArenaIssueResolver(IssueResolver):
             
             if 'o3-mini' in model and hasattr(llm_config, 'top_p'):
                 # o3-mini models require top_p to be set to None
+                llm_config.top_p = None
+            
+            if 'o1-mini' in model and hasattr(llm_config, 'top_p'):
+                # o1-mini models require top_p to be set to None
                 llm_config.top_p = None
             
             print("llm config:", llm_config)
@@ -321,6 +326,7 @@ class PRArenaIssueResolver(IssueResolver):
             "deepseek-v3": "model7",
             "deepseek-r1": "model8",
             "o3-mini": "model9",
+            "o1-mini": "model10",
         }
         
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
