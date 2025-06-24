@@ -95,8 +95,8 @@ class PRArenaIssueResolver(IssueResolver):
         else:
             raise ValueError("No LLM models provided in either the arguments or environment variables.")
         
-        # selected_models = random.sample(model_names, 2)
-        selected_models = model_names
+        selected_models = random.sample(model_names, 2)
+        # selected_models = model_names
         self.llm_configs = []
         
         for model in selected_models:
@@ -141,6 +141,10 @@ class PRArenaIssueResolver(IssueResolver):
             if 'o1-mini' in model and hasattr(llm_config, 'top_p'):
                 # o1-mini models require top_p to be set to None
                 llm_config.top_p = None
+            
+            if 'o1-mini' in model and hasattr(llm_config, 'stop'):
+                # o1-mini models require stop to be set to None
+                llm_config.stop = None
             
             print("llm config:", llm_config)
             
