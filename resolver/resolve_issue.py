@@ -203,7 +203,7 @@ class PRArenaIssueResolver(IssueResolver):
         self.output_dir = 'output1'  # Set output directory for the first model
         
         resolver_output_1: CustomResolverOutput = await self.resolve_issue()
-        logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
+        # logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
         
         resolver_output_1_dict = resolver_output_1.model_dump()
         resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
@@ -226,7 +226,7 @@ class PRArenaIssueResolver(IssueResolver):
         self.output_dir = 'output2'
         
         resolver_output_2: CustomResolverOutput = await self.resolve_issue()
-        logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
+        # logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
         
         resolver_output_2_dict = resolver_output_2.model_dump()
         resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
@@ -304,7 +304,7 @@ class PRArenaIssueResolver(IssueResolver):
             git_patch_2=resolved_output_2.git_patch
         )
         
-        logger.info(f"Language information collected: {language_info}")
+        # logger.info(f"Language information collected: {language_info}")
         
         model_reference = {
             "claude-sonnet-4-20250514": "model1",
@@ -603,7 +603,7 @@ class PRArenaIssueResolver(IssueResolver):
             if customOutput is not None:  # Check if customOutput was created
                 customOutput.duration = duration
             
-            logger.info(f"Output: {customOutput}")
+            # logger.info(f"Output: {customOutput}")
             return customOutput
     
     
