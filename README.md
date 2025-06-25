@@ -1,5 +1,7 @@
 # ⚔️ OpenHands PR Arena ⚔️
 
+**👐 We welcome your feedback. Feel free to reach out via [email](mailto:jiseungh@andrew.cmu.edu) or open an issue on this repository.**
+
 *OpenHands PR Arena* is a competitive framework for coding assistants designed to evaluate and benchmark frontier large language models (LLMs) through paired pull request (PR) generations. It enables developers to compare multiple LLMs in real-world issue resolution tasks by presenting side-by-side code edits and allowing human users to select the better fix.
 
 This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
