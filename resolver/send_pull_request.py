@@ -232,6 +232,98 @@ def make_commit(repo_dir: str, issue: Issue, issue_type: str) -> None:
     if result.returncode != 0:
         raise RuntimeError(f'Failed to commit changes: {result}')
 
+def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resolver_output: CustomResolverOutput = None) -> None:
+    """Make a commit with the changes to the repository.
+
+    Args:
+        repo_dir: The directory containing the repository
+        issue: The issue to fix
+        issue_type: The type of the issue
+        resolver_output: The resolver output containing result explanation (optional)
+    """
+    # Check if git username is set
+    result = subprocess.run(
+        f'git -C {repo_dir} config user.name',
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
+
+    if not result.stdout.strip():
+        # If username is not set, configure git
+        subprocess.run(
+            f'git -C {repo_dir} config user.name "openhands" && '
+            f'git -C {repo_dir} config user.email "openhands@all-hands.dev" && '
+            f'git -C {repo_dir} config alias.git "git --no-pager"',
+            shell=True,
+            check=True,
+        )
+        logger.info('Git user configured as openhands')
+
+    # Add all changes to the git index
+    result = subprocess.run(
+        f'git -C {repo_dir} add .', shell=True, capture_output=True, text=True
+    )
+    if result.returncode != 0:
+        logger.error(f'Error adding files: {result.stderr}')
+        raise RuntimeError('Failed to add files to git')
+
+    # Check the status of the git index
+    status_result = subprocess.run(
+        f'git -C {repo_dir} status --porcelain',
+        shell=True,
+        capture_output=True,
+        text=True,
+    )
+
+    # If there are no changes, raise an error
+    if not status_result.stdout.strip():
+        logger.error(
+            f'No changes to commit for issue #{issue.number}. Skipping commit.'
+        )
+        raise RuntimeError('ERROR: Openhands failed to make code changes.')
+
+    # Prepare the commit message
+    commit_message = f'Fix {issue_type} #{issue.number}: {issue.title}'
+    
+    # Append result explanation if available
+    if resolver_output and resolver_output.result_explanation:
+        # Clean up the explanation text for commit message
+        explanation = resolver_output.result_explanation.strip()
+        
+        # Add summary section
+        commit_message += '\n\nSummary of Changes:'
+        
+        # If the explanation is JSON, try to format it nicely
+        try:
+            explanations = json.loads(explanation)
+            if isinstance(explanations, list):
+                # Format as numbered list
+                for i, item in enumerate(explanations, 1):
+                    commit_message += f'\n{i}. {item}'
+            else:
+                # Single explanation
+                commit_message += f'\n1. {str(explanations)}'
+        except json.JSONDecodeError:
+            # Not JSON, use as plain text with numbering
+            commit_message += f'\n1. {explanation}'
+    
+    # Add duration if available
+    if resolver_output and hasattr(resolver_output, 'duration') and resolver_output.duration:
+        duration_mins = int(resolver_output.duration // 60)
+        duration_secs = int(resolver_output.duration % 60)
+        commit_message += f'\n\nDuration: {duration_mins}m {duration_secs}s'
+
+    # Commit the changes with the enhanced message
+    result = subprocess.run(
+        ['git', '-C', repo_dir, 'commit', '-m', commit_message],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f'Failed to commit changes: {result}')
+    
+    logger.info(f'Created commit with message: {commit_message}')
 
 def send_pull_request(
     issue: Issue,
