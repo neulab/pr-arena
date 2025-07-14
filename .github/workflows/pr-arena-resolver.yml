@@ -27,7 +27,7 @@ permissions:
 jobs:
   auto-fix:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Set a 30-minute timeout for the entire job
+    timeout-minutes: 40  # Set a 40-minute timeout for the entire job
     steps:
       - name: Initial comment with instruction
         uses: actions/github-script@v7
@@ -45,7 +45,7 @@ jobs:
 
             You will be receiving 3 comments on issue as the workflow progresses:
             1. OpenHands started fixing the issue! You can monitor the progress [here].
-              - Please allow up to **30 minutes** for OpenHands to complete fixing the issue.
+              - Please allow up to **40 minutes** for OpenHands to complete fixing the issue.
             2. ⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at this [link].
               - Click the link to view the proposed fixes and select your preferred model. We recommend opening the link in a new tab.
             3. PR has been created based on the fix you've selected. Please review the changes.
@@ -161,7 +161,7 @@ jobs:
               issue_number: ${{ inputs.issue_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `⏱️ PR-Arena workflow has been cancelled due to exceeding the 30-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
+              body: `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
             });
       
       - name: Wait for user's decision and save it to the GitHub environment
