@@ -146,7 +146,7 @@ class PRArenaIssueResolver(IssueResolver):
                 # o1-mini models require stop to be set to None
                 llm_config.stop = None
             
-            print("llm config:", llm_config)
+            # print("llm config:", llm_config)
             
             self.llm_configs.append(llm_config)
             
@@ -458,8 +458,8 @@ class PRArenaIssueResolver(IssueResolver):
             env_file.write(f"UUID={reference_id}\n")
             env_file.write("FAILED=FALSE\n")
         
-        print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
-        print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
+        # print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
+        # print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
 
     
     async def resolve_issue(
@@ -562,7 +562,7 @@ class PRArenaIssueResolver(IssueResolver):
                         return
 
         logger.info(
-            f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model {model_name}, max iterations {self.max_iterations}.'
+            f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model **MODEL NAME REDACTED**, max iterations {self.max_iterations}.'
         )
         
         try:
