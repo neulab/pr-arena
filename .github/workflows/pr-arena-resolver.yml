@@ -61,7 +61,7 @@ jobs:
 
             ## Further Information and Leaderboard
 
-            You can view the leaderboard and further information (e.g., privacy notifications) about PR-Arena at [this repository](https://github.com/neulab/pr-arena/tree/main/resolver/GitHub%20App). You can see a [screen recording](https://youtu.be/BV2Rj_zlk2g) to guide you as well.
+            You can view the leaderboard and further information (e.g., privacy notifications) about PR-Arena at [this repository](https://github.com/neulab/pr-arena/blob/main/README.md). You can see a [screen recording](https://youtu.be/BV2Rj_zlk2g) to guide you as well.
             Please create issues for any bugs or feature requests at the corresponding repository.`
             });
 
