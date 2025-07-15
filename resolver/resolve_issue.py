@@ -308,7 +308,12 @@ class PRArenaIssueResolver(IssueResolver):
         current_time = firestore.SERVER_TIMESTAMP
         
         repo_url = f"https://github.com/{self.owner}/{self.repo}"
-        issue_name = f"Issue #{self.issue_number}"
+        
+        # Extract issue details from the first resolver output (both should have the same issue)
+        issue = resolved_output_1.issue
+        issue_number = issue.number
+        issue_title = issue.title
+        issue_body = issue.body
         
         # Collect language information
         language_info = get_comprehensive_language_info(
@@ -340,7 +345,9 @@ class PRArenaIssueResolver(IssueResolver):
         if not resolved_output_1.git_patch or not resolved_output_2.git_patch:
             issue_data = {
                 "repo_url": repo_url,
-                "issue_name": issue_name,
+                "issue_number": issue_number,
+                "issue_title": issue_title,
+                "issue_body": issue_body,
                 "owner": self.owner,
                 "repo": self.repo,
                 "status": "failed",
@@ -384,7 +391,9 @@ class PRArenaIssueResolver(IssueResolver):
         
         issue_data = {
             "repo_url": repo_url,
-            "issue_name": issue_name,
+            "issue_number": issue_number,
+            "issue_title": issue_title,
+            "issue_body": issue_body,
             "owner": self.owner,
             "repo": self.repo,
             "status": "pending",  # Initial status is pending
