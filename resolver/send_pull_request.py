@@ -283,8 +283,11 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
         )
         raise RuntimeError('ERROR: Openhands failed to make code changes.')
 
-    # Prepare the commit message
-    commit_message = f'Fix {issue_type} #{issue.number}: {issue.title}'
+    # Prepare the commit message with branch name if available
+    if resolver_output and resolver_output.branch_name:
+        commit_message = f'{resolver_output.branch_name}'
+    else:
+        commit_message = f'Fix {issue_type} #{issue.number}'
     
     # Append result explanation if available
     if resolver_output and resolver_output.result_explanation:
