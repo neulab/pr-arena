@@ -232,7 +232,7 @@ def make_commit(repo_dir: str, issue: Issue, issue_type: str) -> None:
     if result.returncode != 0:
         raise RuntimeError(f'Failed to commit changes: {result}')
 
-def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resolver_output: CustomResolverOutput = None) -> None:
+def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resolver_output: CustomResolverOutput, branch_name: str | None = None) -> None:
     """Make a commit with the changes to the repository.
 
     Args:
@@ -240,6 +240,7 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
         issue: The issue to fix
         issue_type: The type of the issue
         resolver_output: The resolver output containing result explanation (optional)
+        branch_name: The branch name to use for the commit (optional)
     """
     # Check if git username is set
     result = subprocess.run(
@@ -284,8 +285,8 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
         raise RuntimeError('ERROR: Openhands failed to make code changes.')
 
     # Prepare the commit message with branch name if available
-    if resolver_output and resolver_output.branch_name:
-        commit_message = f'{resolver_output.branch_name}'
+    if resolver_output and branch_name:
+        commit_message = f'{branch_name}'
     else:
         commit_message = f'Fix {issue_type} #{issue.number}'
     
