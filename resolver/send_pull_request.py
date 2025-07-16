@@ -232,7 +232,7 @@ def make_commit(repo_dir: str, issue: Issue, issue_type: str) -> None:
     if result.returncode != 0:
         raise RuntimeError(f'Failed to commit changes: {result}')
 
-def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resolver_output: CustomResolverOutput, branch_name: str | None = None) -> None:
+def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resolver_output: CustomResolverOutput, branch_name: str | None = None, output_dir: str | None = None) -> None:
     """Make a commit with the changes to the repository.
 
     Args:
@@ -241,6 +241,7 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
         issue_type: The type of the issue
         resolver_output: The resolver output containing result explanation (optional)
         branch_name: The branch name to use for the commit (optional)
+        output_dir: The output directory to use for the commit (optional)
     """
     # Check if git username is set
     result = subprocess.run(
@@ -284,11 +285,19 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
         )
         raise RuntimeError('ERROR: Openhands failed to make code changes.')
 
-    # Prepare the commit message with branch name if available
-    if resolver_output and branch_name:
-        commit_message = f'{branch_name}'
+    tail_str = "Model"
+    
+    model_number = output_dir[-1] if output_dir else ''
+    if model_number == '1':
+        tail_str = '1st Model'
+    elif model_number == '2':
+        tail_str = '2nd Model'
     else:
-        commit_message = f'Fix {issue_type} #{issue.number}'
+        raise ValueError(f'Invalid model number: {model_number}')
+        
+    
+    # Prepare the commit message with branch name if available
+    commit_message = f'Fix {issue_type} #{issue.number} with {tail_str}'
     
     # Append result explanation if available
     if resolver_output and resolver_output.result_explanation:

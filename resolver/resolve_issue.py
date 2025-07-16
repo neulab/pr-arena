@@ -657,7 +657,7 @@ class PRArenaIssueResolver(IssueResolver):
             # 3) make_commit [NEW!] with Summary
             # logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
             # make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
-            make_commit_with_summary(patched_repo_dir, resolver_output.issue, resolver_output.issue_type, resolver_output, branch_name)
+            make_commit_with_summary(patched_repo_dir, resolver_output.issue, resolver_output.issue_type, resolver_output, branch_name, output_dir)
             
             # 4) branch checkout and push
             branch_name, default_branch, base_url, headers = self.prepare_branch_and_push(
