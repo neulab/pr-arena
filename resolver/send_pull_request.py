@@ -316,10 +316,10 @@ def make_commit_with_summary(repo_dir: str, issue: Issue, issue_type: str, resol
                     commit_message += f'\n{i}. {item}'
             else:
                 # Single explanation
-                commit_message += f'\n1. {str(explanations)}'
+                commit_message += f'\n{str(explanations)}'
         except json.JSONDecodeError:
             # Not JSON, use as plain text with numbering
-            commit_message += f'\n1. {explanation}'
+            commit_message += f'\n{explanation}'
     
     # Add duration if available
     if resolver_output and hasattr(resolver_output, 'duration') and resolver_output.duration:
