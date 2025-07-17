@@ -1,6 +1,6 @@
 # ⚔️ OpenHands PR Arena ⚔️
 
-**👐 We welcome your feedback. Feel free to reach out via [email](mailto:jiseungh@andrew.cmu.edu) or open an issue on this repository. 👐**
+**👐 We welcome your feedback. Feel free to fill out the [google form](https://docs.google.com/forms/d/e/1FAIpQLSdNwc2LuqpC7cMrHblH_ZV8PeubWomXh4t2rHQR4Q_Z2VXYKA/viewform?usp=dialog), send an [email](mailto:jiseungh@andrew.cmu.edu), or open an issue on this repository. 👐**
 
 *OpenHands PR Arena* is a competitive framework for coding assistants designed to evaluate and benchmark frontier large language models (LLMs) through paired pull request (PR) generations. It enables developers to compare multiple LLMs in real-world issue resolution tasks by presenting side-by-side code edits and allowing human users to select the better fix.
 
