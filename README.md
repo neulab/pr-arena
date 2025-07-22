@@ -23,28 +23,27 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 
 **⭐️ Please watch the [guideline video](https://youtu.be/BV2Rj_zlk2g) that explains how to use the OpenHands PR Arena GitHub App!**
 
-1. Install OpenHands PR Arena to your GitHub repository.
-    - [Installation Link](https://github.com/apps/openhands-pr-arena/installations/new)
-2. Under `Repository access`, select the repositories you'd like to install the App to, then go to one of the installed repositories.
+1. Install OpenHands PR Arena to your GitHub Repository
+    - Go to the [installation page](https://github.com/apps/openhands-pr-arena/installations/new)
+    - Under **Repository access**, select the repositories you want to install the app on
+2. Navigate to one of the selected repositories
 3. Label an issue with `pr-arena` to trigger the automated fix:
-    - Open or create an issue, click `Labels` in the sidebar, and type `pr-arena`.
-4. Wait approximately 10 minutes (up to 20 minutes) for the agent to resolve the issue and open the Arena.
-5. Click the link in the comment to enter the Arena and choose your preferred model.
-6. The selected fix will be automatically submitted as a Pull Request.
+    - Open or create an issue, click `Labels` in the sidebar, and select `pr-arena`
+4. Wait for the agent to resolve the issue and open the Arena (this may take 20–40 minutes)
+5. Click the link in the comment to enter the Arena and choose your preferred model
+6. The selected fix will be automatically submitted as a Pull Request
 
 **⭐️ Progress is updated via comments on the issue—keep an eye on them!**
-**⭐️ OpenHands PR Arena uses frontier models to resolve issues—enjoy it for free for a limited time!**
 
 ## Privacy Notification
-1. The only code we collect is the `git_diff` generated during issue resolution. We **never** collect the entire codebase and **never** release any user data.
-2. **Do not** modify the injected workflow. Once modified, it will no longer be triggered.
-3. Please use the App only on repositories where you consent to having your code processed by the LLM provider.
-4. The following metadata is collected for research purpose:
+1. The only code we collect is the `git_diff` generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
+2. **Important**: Installing this App will automatically add a workflow file named `pr-arena-workflow.yml` to your repository. This file redirects to the actual resolver workflow located at: [https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml](https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml). If you are concerned about repository workflows, we encourage you to review the resolver workflow to understand the operations it performs.
+3. Do not modify the injected workflow. Any modifications will prevent it from being triggered.
+4. Please install and use this app **only** on repositories where you consent to having code snippets (i.e., `git_diff`) processed by the LLM provider.
+5. The following metadata is collected for research purpose:
     - User info: `owner`, `repo`, `repo URL`
     - Model info: `user preference on model`, `duration of an attempt`
-    - Code info: `agent code (git_diffs)`, `commit hash` 
-
-⚠️ We **do not** access or store your full codebase at any point.
+    - Code info: `agent code (git_diffs)`, `commit hash`, `repository language composition`
 
 ##  Q&A
 **Q. How can I track the progress?**
@@ -74,6 +73,10 @@ There are three types of errors:
 **Q. How long does the process take?**
 
 A. The time depends on the complexity of the issue. Some reasoning models may take longer to process. Typically, it should take **less than 30 minutes**, so please be patient!
+
+**Q. How does this affect my GitHub Actions build minutes?**
+
+A. The workflow makes API calls to our backend infrastructure where OpenHands agents run remotely. Your GitHub Actions runner only handles lightweight tasks like triggering the workflow and creating pull requests. The actual AI processing and code generation happens on our servers, so it consumes minimal GitHub Actions minutes (typically just a few minutes per issue).
 
 ## Security & Permission (🔒)
 This GitHub App requires the following permissions:
