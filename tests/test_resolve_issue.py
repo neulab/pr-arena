@@ -1,15 +1,11 @@
 import unittest
-import asyncio
 import os
-import tempfile
-import json
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock
 from argparse import Namespace
 
 # Import the classes we want to test
 from resolver.resolve_issue import PRArenaIssueResolver
 from resolver.resolver_output import CustomResolverOutput
-from openhands.resolver.interfaces.issue import Issue
 
 
 class TestPRArenaIssueResolver(unittest.TestCase):
@@ -236,7 +232,6 @@ class TestUtilityFunctions(unittest.TestCase):
     
     def test_int_or_none_with_none_string(self):
         """Test int_or_none function with 'none' string"""
-        from resolver.resolve_issue import main
         
         # Access the nested function through the main function's local scope
         # This is a bit tricky, so we'll test it indirectly through argument parsing

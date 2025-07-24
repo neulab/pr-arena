@@ -1,8 +1,6 @@
 import unittest
 import os
-import sys
-import importlib.util
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 
 
 class TestVersionInfo(unittest.TestCase):

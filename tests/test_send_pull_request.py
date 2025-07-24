@@ -3,8 +3,7 @@ import os
 import json
 import tempfile
 import shutil
-from unittest.mock import Mock, patch, MagicMock, mock_open
-from argparse import Namespace
+from unittest.mock import Mock, patch, mock_open
 
 # Import the functions and classes we want to test
 from resolver.send_pull_request import (
@@ -15,7 +14,6 @@ from resolver.send_pull_request import (
     make_commit,
     make_commit_with_summary,
     send_pull_request,
-    update_existing_pull_request,
     process_single_issue
 )
 from resolver.resolver_output import CustomResolverOutput
