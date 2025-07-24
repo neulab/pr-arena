@@ -144,9 +144,16 @@ def detect_languages_from_git_patch(git_patch: str) -> Dict[str, int]:
                 language_lines[extension_map[ext]] += 1
             elif current_file.lower().endswith('dockerfile'):
                 language_lines['Dockerfile'] += 1
-            elif current_file.lower() in ['makefile', 'makefile.am', 'makefile.in']:
+            elif current_file.lower() in [
+                'makefile',
+                'makefile.am',
+                'makefile.in',
+            ]:
                 language_lines['Makefile'] += 1
-            elif current_file.lower().endswith('.cmake') or current_file.lower() == 'cmakelists.txt':
+            elif (
+                current_file.lower().endswith('.cmake')
+                or current_file.lower() == 'cmakelists.txt'
+            ):
                 language_lines['CMake'] += 1
     
     return dict(language_lines)
@@ -202,7 +209,13 @@ def calculate_language_percentages(language_counts: Dict[str, int]) -> Dict[str,
     return {lang: (count / total) * 100 for lang, count in language_counts.items()}
 
 
-def get_comprehensive_language_info(owner: str, repo: str, token: str, git_patch_1: str = None, git_patch_2: str = None) -> Dict:
+def get_comprehensive_language_info(
+    owner: str,
+    repo: str,
+    token: str,
+    git_patch_1: str = None,
+    git_patch_2: str = None,
+) -> Dict:
     """
     Get comprehensive language information combining repository stats and patch analysis.
     
@@ -235,7 +248,10 @@ def get_comprehensive_language_info(owner: str, repo: str, token: str, git_patch
     patch_percentages = calculate_language_percentages(patch_languages)
     
     # Get primary language (most used in repo)
-    primary_language = max(repo_languages.keys(), key=repo_languages.get) if repo_languages else "Unknown"
+    primary_language = (
+        max(repo_languages.keys(), key=repo_languages.get) 
+        if repo_languages else "Unknown"
+    )
     
     return {
         "primary_language": primary_language,

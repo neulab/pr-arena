@@ -3,17 +3,18 @@ import dataclasses
 import json
 import os
 import pathlib
-import shutil
-import subprocess
-from argparse import Namespace
-from typing import Any, cast
-import uuid
 import random
 import shlex
+import shutil
+import subprocess
 import time
-import requests
-import httpx
+import uuid
+from argparse import Namespace
 from enum import Enum
+from typing import Any, cast
+
+import httpx
+import requests
 
 # Apply daytona compatibility patch before any openhands imports
 from resolver.daytona_patch import apply_daytona_patch
@@ -46,13 +47,14 @@ from openhands.core.config import AgentConfig, AppConfig, LLMConfig, SandboxConf
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Don't make this confgurable for now, unless we have other competitive agents
+# Don't make this configurable for now, unless we have other competitive agents
 AGENT_CLASS = 'CodeActAgent'
 
 
 class PRArenaIssueResolver(IssueResolver):
+    """PR Arena Issue Resolver that processes issues with multiple LLM models."""
 
-    def __init__(self, args: Namespace):
+    def __init__(self, args: Namespace) -> None:
         # super().__init__(args) # Most shared arguments are processed by parent class
         
         # Setup and validate container images
@@ -94,7 +96,9 @@ class PRArenaIssueResolver(IssueResolver):
         if multiple_models:
             model_names = [model.strip() for model in multiple_models.split(",")]
         else:
-            raise ValueError("No LLM models provided in either the arguments or environment variables.")
+            raise ValueError(
+                "No LLM models provided in either the arguments or environment variables."
+            )
         
         selected_models = random.sample(model_names, 2)
         # selected_models = model_names
@@ -103,10 +107,10 @@ class PRArenaIssueResolver(IssueResolver):
         for model in selected_models:
             # Determine if this model needs special parameter handling
             needs_drop_params = (
-                'o1-mini' in model or
-                'o3-mini' in model or
-                'o4-mini' in model or
-                'gemini' in model.lower()
+                'o1-mini' in model
+                or 'o3-mini' in model
+                or 'o4-mini' in model
+                or 'gemini' in model.lower()
             )
             
             # Create LLMConfig instance
@@ -147,7 +151,6 @@ class PRArenaIssueResolver(IssueResolver):
                 # o1-mini models require stop to be set to None
                 llm_config.stop = None
             
-            # print("llm config:", llm_config)
             
             self.llm_configs.append(llm_config)
             
@@ -200,7 +203,7 @@ class PRArenaIssueResolver(IssueResolver):
         runtime.close()
         return patch
 
-    async def resolve_issues_with_random_models(self):
+    async def resolve_issues_with_random_models(self) -> None:
         llm_config = self.llm_configs[0]
         self.llm_config = llm_config
         
@@ -516,9 +519,7 @@ class PRArenaIssueResolver(IssueResolver):
                     f'Comment ID {self.comment_id} did not have a match for issue {issue.number}'
                 )
 
-        # TEST METADATA
-        model_name = self.llm_config.model.split('/')[-1]
-
+        # Setup directories
         pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         pathlib.Path(os.path.join(self.output_dir, 'infer_logs')).mkdir(
             parents=True, exist_ok=True
@@ -756,7 +757,7 @@ class PRArenaIssueResolver(IssueResolver):
 
         return branch_name, default_branch, base_url, headers
     
-def main():
+def main() -> None:
     import argparse
     
     def int_or_none(value: str) -> int | None:
