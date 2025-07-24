@@ -115,7 +115,7 @@ def detect_languages_from_git_patch(git_patch: str) -> Dict[str, int]:
         return {}
     
     extension_map = get_file_extension_language_map()
-    language_lines = defaultdict(int)
+    language_lines: dict[str, int] = defaultdict(int)
     
     # Split patch into lines
     lines = git_patch.split('\n')
@@ -213,8 +213,8 @@ def get_comprehensive_language_info(
     owner: str,
     repo: str,
     token: str,
-    git_patch_1: str = None,
-    git_patch_2: str = None,
+    git_patch_1: str | None = None,
+    git_patch_2: str | None = None,
 ) -> Dict:
     """
     Get comprehensive language information combining repository stats and patch analysis.
@@ -234,7 +234,7 @@ def get_comprehensive_language_info(
     repo_percentages = calculate_language_percentages(repo_languages)
     
     # Analyze patches if provided
-    patch_languages = {}
+    patch_languages: dict[str, int] = {}
     if git_patch_1:
         patch1_langs = detect_languages_from_git_patch(git_patch_1)
         for lang, count in patch1_langs.items():
@@ -249,7 +249,7 @@ def get_comprehensive_language_info(
     
     # Get primary language (most used in repo)
     primary_language = (
-        max(repo_languages.keys(), key=repo_languages.get) 
+        max(repo_languages.keys(), key=lambda x: repo_languages[x]) 
         if repo_languages else "Unknown"
     )
     

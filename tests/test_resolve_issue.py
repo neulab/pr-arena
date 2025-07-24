@@ -214,13 +214,13 @@ class TestPRArenaIssueResolver(unittest.TestCase):
         mock_collection.document.return_value = mock_document
         
         # Mock get_new_commit_hash calls
-        with patch.object(resolver, 'get_new_commit_hash', new_callable=AsyncMock) as mock_get_commit:
+        with patch.object(resolver, 'get_new_commit_hash', new_callable=AsyncMock):
             # Mock pathlib and file operations
-            with patch('resolver.resolve_issue.pathlib.Path') as mock_path:
-                with patch('builtins.open', unittest.mock.mock_open()) as mock_file:
+            with patch('resolver.resolve_issue.pathlib.Path'):
+                with patch('builtins.open', unittest.mock.mock_open()):
                     # Mock get_comprehensive_language_info
                     with patch('resolver.resolve_issue.get_comprehensive_language_info', 
-                             return_value={"primary_language": "Python"}) as mock_lang_info:
+                             return_value={"primary_language": "Python"}):
                         # Mock environment variable
                         with patch.dict(os.environ, {'GITHUB_ENV': '/tmp/github_env'}):
                             with patch('builtins.open', unittest.mock.mock_open(), create=True):
@@ -242,7 +242,7 @@ class TestUtilityFunctions(unittest.TestCase):
         # This is a bit tricky, so we'll test it indirectly through argument parsing
         
         import argparse
-        parser = argparse.ArgumentParser()
+        argparse.ArgumentParser()  # Just test that it doesn't raise an error
         
         # Define the function locally for testing
         def int_or_none(value: str):

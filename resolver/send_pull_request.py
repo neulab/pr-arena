@@ -1,28 +1,27 @@
 import argparse
 import json
-from typing import Iterable
 import os
 import shutil
 import subprocess
+from typing import Iterable
 
 import jinja2
 from pydantic import SecretStr
 
-# Apply daytona compatibility patch before any openhands imports
 from resolver.daytona_patch import apply_daytona_patch
-apply_daytona_patch()
-
 from resolver.resolver_output import CustomResolverOutput
 
-import openhands
-from openhands.core.config import LLMConfig
-from openhands.core.logger import openhands_logger as logger
-from openhands.integrations.service_types import ProviderType
-from openhands.llm.llm import LLM
-from openhands.resolver.interfaces.github import GithubIssueHandler
-from openhands.resolver.interfaces.issue import Issue
-from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue
-from openhands.resolver.patching import apply_diff, parse_patch
+# Apply daytona compatibility patch before any openhands imports
+apply_daytona_patch()
+
+from openhands.core.config import LLMConfig  # noqa: E402
+from openhands.core.logger import openhands_logger as logger  # noqa: E402
+from openhands.integrations.service_types import ProviderType  # noqa: E402
+from openhands.llm.llm import LLM  # noqa: E402
+from openhands.resolver.interfaces.github import GithubIssueHandler  # noqa: E402
+from openhands.resolver.interfaces.issue import Issue  # noqa: E402
+from openhands.resolver.interfaces.issue_definitions import ServiceContextIssue  # noqa: E402
+from openhands.resolver.patching import apply_diff, parse_patch  # noqa: E402
 
 def load_all_resolver_outputs(
     output_jsonl: str,
@@ -414,6 +413,8 @@ def send_pull_request(
 
     # Use the branch name from resolver_output
     branch_name = resolver_output.branch_name
+    if not branch_name:
+        raise ValueError("Branch name is required but not provided in resolver output")
     logger.info(f'Using existing branch: {branch_name}')
 
     # Get the default branch or use specified target branch

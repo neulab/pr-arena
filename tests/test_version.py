@@ -211,9 +211,6 @@ class TestVersionUtilities(unittest.TestCase):
             import resolver
             version = resolver.__version__
             
-            # Basic semantic versioning regex
-            semver_pattern = r'^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
-            
             # For this project, we'll use a simpler pattern since it's early stage
             simple_pattern = r'^\d+\.\d+\.\d+$'
             

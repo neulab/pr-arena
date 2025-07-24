@@ -16,36 +16,30 @@ from typing import Any, cast
 import httpx
 import requests
 
-# Apply daytona compatibility patch before any openhands imports
-from resolver.daytona_patch import apply_daytona_patch
-apply_daytona_patch()
-
-from resolver.secrets import Secrets
-from resolver.utils import load_firebase_config, get_comprehensive_language_info
-from resolver.resolver_output import CustomResolverOutput
-from resolver.send_pull_request import (
-    initialize_repo,
-    apply_patch,
-    make_commit,
-    make_commit_with_summary
-)
-
-from pydantic import SecretStr
-
-import openhands
-from openhands.core.logger import openhands_logger as logger
-from openhands.resolver.resolver_output import ResolverOutput
-
-from openhands.resolver.issue_resolver import IssueResolver
-from openhands.runtime import Runtime
-from openhands.resolver.interfaces.issue import Issue
-
-from openhands.integrations.service_types import ProviderType
-from openhands.resolver.issue_handler_factory import IssueHandlerFactory
-from openhands.core.config import AgentConfig, AppConfig, LLMConfig, SandboxConfig
-
 import firebase_admin
 from firebase_admin import credentials, firestore
+
+from resolver.daytona_patch import apply_daytona_patch
+from resolver.resolver_output import CustomResolverOutput
+from resolver.secrets import Secrets
+from resolver.send_pull_request import (
+    apply_patch,
+    initialize_repo,
+    make_commit_with_summary,
+)
+from resolver.utils import get_comprehensive_language_info, load_firebase_config
+
+# Apply daytona compatibility patch before any openhands imports
+apply_daytona_patch()
+
+from openhands.core.config import LLMConfig  # noqa: E402
+from openhands.core.logger import openhands_logger as logger  # noqa: E402
+from openhands.integrations.service_types import ProviderType  # noqa: E402
+from openhands.resolver.interfaces.issue import Issue  # noqa: E402
+from openhands.resolver.issue_handler_factory import IssueHandlerFactory  # noqa: E402
+from openhands.resolver.issue_resolver import IssueResolver  # noqa: E402
+from openhands.resolver.resolver_output import ResolverOutput  # noqa: E402
+from openhands.runtime import Runtime  # noqa: E402
 
 # Don't make this configurable for now, unless we have other competitive agents
 AGENT_CLASS = 'CodeActAgent'
@@ -570,7 +564,7 @@ class PRArenaIssueResolver(IssueResolver):
                         logger.warning(
                             f'Issue {self.issue_number} was already processed. Skipping.'
                         )
-                        return
+                        return CustomResolverOutput(**data.model_dump())
 
         logger.info(
             f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model **MODEL NAME REDACTED**, max iterations {self.max_iterations}.'
@@ -629,9 +623,25 @@ class PRArenaIssueResolver(IssueResolver):
             
             if customOutput is not None:  # Check if customOutput was created
                 customOutput.duration = duration
-            
-            # logger.info(f"Output: {customOutput}")
-            return customOutput
+                # logger.info(f"Output: {customOutput}")
+                return customOutput
+            else:
+                # Create a minimal error output if something went wrong
+                error_output = CustomResolverOutput(
+                    issue=issue,
+                    issue_type=self.issue_type,
+                    instruction="",
+                    base_commit=base_commit,
+                    git_patch=None,
+                    history=[],
+                    metrics={},
+                    success=False,
+                    comment_success=None,
+                    result_explanation="Error occurred during processing",
+                    error="Failed to complete processing",
+                    duration=duration
+                )
+                return error_output
     
     
     async def get_new_commit_hash(
