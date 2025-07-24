@@ -3,8 +3,7 @@ import os
 import json
 import tempfile
 import shutil
-from unittest.mock import Mock, patch, mock_open
-from typing import Any
+from unittest.mock import patch, mock_open
 
 
 # Mock classes for testing without openhands dependencies

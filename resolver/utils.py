@@ -1,8 +1,7 @@
 import json
-import re
 import os
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict
 import requests
 
 

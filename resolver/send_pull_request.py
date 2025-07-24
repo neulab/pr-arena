@@ -6,7 +6,6 @@ import subprocess
 from typing import Iterable
 
 import jinja2
-from pydantic import SecretStr
 
 from resolver.daytona_patch import apply_daytona_patch
 from resolver.resolver_output import CustomResolverOutput

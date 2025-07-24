@@ -5,7 +5,6 @@ import argparse
 import os
 import json
 
-import openhands
 from openhands.core.logger import openhands_logger as logger
 
 import firebase_admin
