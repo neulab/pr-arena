@@ -115,11 +115,11 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         
         # Mock the get_api_key method to return our provided API key
         # This bypasses the Firebase Function call for testing
-        def mock_get_api_key():
+        def mock_get_api_key(cls):
             return api_key
         
         # Replace the class method with our mock
-        Secrets.get_api_key = classmethod(lambda cls: mock_get_api_key())
+        setattr(Secrets, 'get_api_key', classmethod(mock_get_api_key))
         
         # Also set environment variable as fallback
         os.environ['LLM_API_KEY'] = api_key
