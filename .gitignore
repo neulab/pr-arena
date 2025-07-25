@@ -8,3 +8,10 @@ archive/
 .mypy_cache
 .DS_Store
 dist/
+
+# Model testing directories
+model_test_logs/
+test_output_*/
+
+# Virtual environment
+venv/
