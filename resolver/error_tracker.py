@@ -1,5 +1,3 @@
-import os
-import time
 import uuid
 from typing import Optional, Dict, Any
 
@@ -18,10 +16,19 @@ class ErrorTracker:
         self.repo = repo
         self.issue_number = issue_number
         self.token = token
+        self.issue_title = None  # Will be populated when available
+        self.issue_body = None   # Will be populated when available
 
         # Initialize Firebase
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
+    
+    def set_issue_info(self, issue_title: str = None, issue_body: str = None):
+        """Set issue title and body when available."""
+        if issue_title:
+            self.issue_title = issue_title
+        if issue_body:
+            self.issue_body = issue_body
 
     async def log_error(
         self,
@@ -67,7 +74,9 @@ class ErrorTracker:
             "timestamp": current_time,
             "models": models or {},
             "additional_context": additional_context or {},
-            "installationToken": self.token
+            "installationToken": self.token,
+            "issue_title": self.issue_title,
+            "issue_body": self.issue_body
         }
 
         # If we have an existing UUID, try to link it to issue_collection
@@ -93,24 +102,26 @@ class ErrorTracker:
         """
         import asyncio
 
-        # Try to get existing event loop, create new one if needed
+        # For synchronous usage, we cannot handle running event loops
+        # This function is meant for standalone script usage
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If loop is already running, we need to create a task
-                task = loop.create_task(self.log_error(
-                    error_type, error_message, uuid_ref, models, additional_context
-                ))
-                return task
-            else:
-                return loop.run_until_complete(self.log_error(
-                    error_type, error_message, uuid_ref, models, additional_context
-                ))
-        except RuntimeError:
-            # No event loop exists, create new one
+            # Try to run in a new event loop
             return asyncio.run(self.log_error(
                 error_type, error_message, uuid_ref, models, additional_context
             ))
+        except RuntimeError as e:
+            if "asyncio.run() cannot be called from a running event loop" in str(e):
+                # If called from within an async context, generate UUID and warn
+                import warnings
+                error_uuid = uuid_ref if uuid_ref else str(uuid.uuid4())
+                warnings.warn(
+                    "log_error_sync called from async context. Error logging skipped. "
+                    "Use 'await log_error()' instead.",
+                    RuntimeWarning
+                )
+                return error_uuid
+            else:
+                raise
 
 
 def log_workflow_error(

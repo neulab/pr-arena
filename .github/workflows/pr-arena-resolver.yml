@@ -82,6 +82,11 @@ jobs:
       - name: Log agent failure error
         if: steps.check_failure.outputs.failed == 'true' || failure()
         run: |
+          UUID_VALUE="${{ env.UUID }}"
+          if [ -z "$UUID_VALUE" ]; then
+            UUID_VALUE=$(python3 -c "import uuid; print(uuid.uuid4())")
+            echo "UUID=$UUID_VALUE" >> $GITHUB_ENV
+          fi
           cd /tmp && python -m resolver.error_tracker \
             --owner ${{ github.repository_owner }} \
             --repo ${{ github.event.repository.name }} \
@@ -89,7 +94,7 @@ jobs:
             --token ${{ inputs.pat_token }} \
             --error-type "agent_failure" \
             --error-message "Agent failed during issue resolution process" \
-            --uuid "${{ env.UUID }}" \
+            --uuid "$UUID_VALUE" \
             --models '${{ env.LLM_MODELS }}'
         continue-on-error: true
 
@@ -132,6 +137,11 @@ jobs:
       - name: Log timeout error
         if: ${{ always() && job.status == 'cancelled' }}
         run: |
+          UUID_VALUE="${{ env.UUID }}"
+          if [ -z "$UUID_VALUE" ]; then
+            UUID_VALUE=$(python3 -c "import uuid; print(uuid.uuid4())")
+            echo "UUID=$UUID_VALUE" >> $GITHUB_ENV
+          fi
           cd /tmp && python -m resolver.error_tracker \
             --owner ${{ github.repository_owner }} \
             --repo ${{ github.event.repository.name }} \
@@ -139,7 +149,7 @@ jobs:
             --token ${{ inputs.pat_token }} \
             --error-type "timeout" \
             --error-message "Workflow exceeded 40-minute timeout limit" \
-            --uuid "${{ env.UUID }}" \
+            --uuid "$UUID_VALUE" \
             --models '${{ env.LLM_MODELS }}'
         continue-on-error: true
 

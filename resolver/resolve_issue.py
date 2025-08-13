@@ -542,6 +542,9 @@ class PRArenaIssueResolver(IssueResolver):
             )
 
         issue = issues[0]
+        
+        # Update error tracker with issue information
+        self.error_tracker.set_issue_info(issue.title, issue.body)
 
         if self.comment_id is not None:
             if (
