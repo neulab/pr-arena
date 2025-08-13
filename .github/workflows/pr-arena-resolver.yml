@@ -38,7 +38,7 @@ jobs:
               issue_number: ${{ inputs.issue_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `PR-Arena has started the task [click here for details](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}). For more info about how to use PR-Arena, [click this link](https://github.com/neulab/pr-arena?tab=readme-ov-file#qa).`
+              body: `👐 OpenHands PR-Arena has started the task: [click here for details](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}). For more info about how to use OpenHands PR-Arena, [click this link](https://github.com/neulab/pr-arena?tab=readme-ov-file#qa).`
             });
 
       - name: Checkout repository
