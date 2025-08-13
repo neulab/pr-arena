@@ -16,6 +16,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 from resolver.daytona_patch import apply_daytona_patch
+from resolver.error_tracker import ErrorTracker
 from resolver.resolver_output import CustomResolverOutput
 from resolver.secrets import Secrets
 from resolver.send_pull_request import (
@@ -184,6 +185,14 @@ class PRArenaIssueResolver(IssueResolver):
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
         
+        # Initialize error tracker
+        self.error_tracker = ErrorTracker(
+            owner=self.owner,
+            repo=self.repo, 
+            issue_number=self.issue_number,
+            token=self.token
+        )
+        
     async def complete_runtime(
         self,
         runtime: Runtime,
@@ -194,59 +203,98 @@ class PRArenaIssueResolver(IssueResolver):
         return patch
 
     async def resolve_issues_with_random_models(self) -> None:
-        llm_config = self.llm_configs[0]
-        self.llm_config = llm_config
+        uuid_ref = None
+        models_info = {
+            "model1": self.llm_configs[0].model.split("/")[-1] if len(self.llm_configs) > 0 else "unknown",
+            "model2": self.llm_configs[1].model.split("/")[-1] if len(self.llm_configs) > 1 else "unknown"
+        }
         
-        factory = IssueHandlerFactory(
-            owner=self.owner,
-            repo=self.repo,
-            token=self.token,
-            username=self.username,
-            platform=self.platform,
-            base_domain='github.com',
-            issue_type=self.issue_type,
-            llm_config=llm_config,
-        )
-        self.issue_handler = factory.create()
-        self.output_dir = 'output1'  # Set output directory for the first model
-        
-        resolver_output_1: CustomResolverOutput = await self.resolve_issue()
-        # logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
-        
-        resolver_output_1_dict = resolver_output_1.model_dump()
-        resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
-        resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
+        try:
+            llm_config = self.llm_configs[0]
+            self.llm_config = llm_config
+            
+            factory = IssueHandlerFactory(
+                owner=self.owner,
+                repo=self.repo,
+                token=self.token,
+                username=self.username,
+                platform=self.platform,
+                base_domain='github.com',
+                issue_type=self.issue_type,
+                llm_config=llm_config,
+            )
+            self.issue_handler = factory.create()
+            self.output_dir = 'output1'  # Set output directory for the first model
+            
+            resolver_output_1: CustomResolverOutput = await self.resolve_issue()
+            # logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
+            
+            resolver_output_1_dict = resolver_output_1.model_dump()
+            resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
+            resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
 
-        llm_config = self.llm_configs[1]
-        self.llm_config = llm_config
-        
-        factory = IssueHandlerFactory(
-            owner=self.owner,
-            repo=self.repo,
-            token=self.token,
-            username=self.username,
-            platform=self.platform,
-            base_domain='github.com',
-            issue_type=self.issue_type,
-            llm_config=llm_config,
-        )
-        self.issue_handler = factory.create()
-        self.output_dir = 'output2'
-        
-        resolver_output_2: CustomResolverOutput = await self.resolve_issue()
-        # logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
-        
-        resolver_output_2_dict = resolver_output_2.model_dump()
-        resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
-        resolver_output_2 = CustomResolverOutput(**resolver_output_2_dict)
+            llm_config = self.llm_configs[1]
+            self.llm_config = llm_config
+            
+            factory = IssueHandlerFactory(
+                owner=self.owner,
+                repo=self.repo,
+                token=self.token,
+                username=self.username,
+                platform=self.platform,
+                base_domain='github.com',
+                issue_type=self.issue_type,
+                llm_config=llm_config,
+            )
+            self.issue_handler = factory.create()
+            self.output_dir = 'output2'
+            
+            resolver_output_2: CustomResolverOutput = await self.resolve_issue()
+            # logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
+            
+            resolver_output_2_dict = resolver_output_2.model_dump()
+            resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
+            resolver_output_2 = CustomResolverOutput(**resolver_output_2_dict)
 
-
-        # TODO: Send commit hash to the firebase.
-        await self.send_to_firebase (
-            resolved_output_1=resolver_output_1,
-            resolved_output_2=resolver_output_2,
-            pr_type="draft"
-        )
+            # TODO: Send commit hash to the firebase.
+            await self.send_to_firebase (
+                resolved_output_1=resolver_output_1,
+                resolved_output_2=resolver_output_2,
+                pr_type="draft"
+            )
+            
+            # Get UUID from environment for error tracking if needed
+            uuid_ref = os.getenv("UUID")
+            
+        except Exception as e:
+            logger.error(f"Error in resolve_issues_with_random_models: {str(e)}")
+            
+            # Log the error to error_collection
+            try:
+                await self.error_tracker.log_error(
+                    error_type="agent_failure",
+                    error_message=f"Agent failed during issue resolution: {str(e)}",
+                    uuid_ref=uuid_ref,
+                    models=models_info,
+                    additional_context={
+                        "stage": "issue_resolution",
+                        "exception_type": type(e).__name__
+                    }
+                )
+            except Exception as tracking_error:
+                logger.error(f"Failed to log error to Firebase: {tracking_error}")
+            
+            # Set FAILED=TRUE in GitHub environment
+            github_env_path = os.getenv("GITHUB_ENV")
+            if github_env_path:
+                try:
+                    with open(github_env_path, "a") as env_file:
+                        env_file.write("FAILED=TRUE\n")
+                except Exception as env_error:
+                    logger.error(f"Failed to write to GITHUB_ENV: {env_error}")
+            
+            # Re-raise the exception so workflow can handle it
+            raise
 
     async def send_to_firebase (
         self,
@@ -330,6 +378,8 @@ class PRArenaIssueResolver(IssueResolver):
             "deepseek-r1": "model8",
             "o3-mini": "model9",
             "o1-mini": "model10",
+            "kimi-k2-0711-preview": "model11",
+            "gemini-2.5-pro-preview-06-05": "model12",
         }
         
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
