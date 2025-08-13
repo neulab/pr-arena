@@ -16,14 +16,14 @@ class ErrorTracker:
         self.repo = repo
         self.issue_number = issue_number
         self.token = token
-        self.issue_title = None  # Will be populated when available
-        self.issue_body = None   # Will be populated when available
+        self.issue_title: Optional[str] = None  # Will be populated when available
+        self.issue_body: Optional[str] = None   # Will be populated when available
 
         # Initialize Firebase
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
     
-    def set_issue_info(self, issue_title: str = None, issue_body: str = None):
+    def set_issue_info(self, issue_title: Optional[str] = None, issue_body: Optional[str] = None) -> None:
         """Set issue title and body when available."""
         if issue_title:
             self.issue_title = issue_title
