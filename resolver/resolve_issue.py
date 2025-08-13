@@ -385,53 +385,7 @@ class PRArenaIssueResolver(IssueResolver):
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
         model2_id = model_reference.get((cast(str, resolved_output_2.model)), "Model ID Not Found")
 
-        if not resolved_output_1.git_patch or not resolved_output_2.git_patch:
-            issue_data = {
-                "repo_url": repo_url,
-                "issue_number": issue_number,
-                "issue_title": issue_title,
-                "issue_body": issue_body,
-                "owner": self.owner,
-                "repo": self.repo,
-                "status": "failed",
-                "language_info": language_info,
-                "models": {
-                    "modelA": {
-                        "modelId": model1_id,
-                        "modelName": resolved_output_1.model,
-                        "commit_hash": resolved_output_1.commit_hash,
-                        "agent_code": resolved_output_1.git_patch if resolved_output_1.git_patch else "",
-                        "duration": resolved_output_1.duration if resolved_output_1.duration else None
-                    },
-                    "modelB": {
-                        "modelId": model2_id,
-                        "modelName": resolved_output_2.model,
-                        "commit_hash": resolved_output_2.commit_hash,
-                        "agent_code": resolved_output_2.git_patch if resolved_output_2.git_patch else "",
-                        "duration": resolved_output_2.duration if resolved_output_2.duration else None
-                    }
-                },
-                "winner": None,  # No winner determined yet
-                "createdAt": current_time,
-                "updatedAt": current_time,
-                "installationToken": self.token
-            }
-
-            reference_id = str(uuid.uuid4())
-
-            issue_ref = db.collection("issue_collection").document(reference_id)
-            issue_ref.set(issue_data)
-
-            github_env_path = os.getenv("GITHUB_ENV")
-            if not github_env_path:
-                raise RuntimeError("GITHUB_ENV environment variable is not set.")
-
-            # Write the decision to the environment file
-            with open(github_env_path, "a") as env_file:
-                env_file.write("FAILED=TRUE\n")
-
-            return
-
+        # Create unified issue data structure that handles both empty and non-empty patches
         issue_data = {
             "repo_url": repo_url,
             "issue_number": issue_number,
@@ -439,7 +393,7 @@ class PRArenaIssueResolver(IssueResolver):
             "issue_body": issue_body,
             "owner": self.owner,
             "repo": self.repo,
-            "status": "pending",  # Initial status is pending
+            "status": "pending",  # Always pending to allow arena comparison
             "language_info": language_info,
             "models": {
                 "modelA": {
