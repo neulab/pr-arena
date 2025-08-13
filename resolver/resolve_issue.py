@@ -47,14 +47,14 @@ class PRArenaIssueResolver(IssueResolver):
 
     def __init__(self, args: Namespace) -> None:
         # super().__init__(args) # Most shared arguments are processed by parent class
-        
+
         # Setup and validate container images
         self.sandbox_config = self._setup_sandbox_config(
             args.base_container_image,
             args.runtime_container_image,
             args.is_experimental,
         )
-        
+
         parts = args.selected_repo.rsplit('/', 1)
         if len(parts) < 2:
             raise ValueError('Invalid repository format. Expected owner/repo')
@@ -77,7 +77,7 @@ class PRArenaIssueResolver(IssueResolver):
         llm_retry_max_wait = int(os.environ.get('LLM_RETRY_MAX_WAIT', '30'))
         llm_retry_multiplier = int(os.environ.get('LLM_RETRY_MULTIPLIER', 2))
         llm_timeout = int(os.environ.get('LLM_TIMEOUT', 0))
-        
+
         # Initialize values for custom resolver
         self.token = token
         self.username = username
@@ -90,11 +90,11 @@ class PRArenaIssueResolver(IssueResolver):
             raise ValueError(
                 "No LLM models provided in either the arguments or environment variables."
             )
-        
+
         selected_models = random.sample(model_names, 2)
         # selected_models = model_names
         self.llm_configs = []
-        
+
         for model in selected_models:
             # Determine if this model needs special parameter handling
             needs_drop_params = (
@@ -103,7 +103,7 @@ class PRArenaIssueResolver(IssueResolver):
                 or 'o4-mini' in model
                 or 'gemini' in model.lower()
             )
-            
+
             # Create LLMConfig instance
             llm_config = LLMConfig(
                 model=model,
@@ -116,7 +116,7 @@ class PRArenaIssueResolver(IssueResolver):
                 timeout=llm_timeout,
                 drop_params=needs_drop_params,
             )
-            
+
             if 'gemini' in model.lower():
                 # Gemini models have specific limitations on tool formats
                 # Set additional Gemini-specific configurations if needed
@@ -125,30 +125,30 @@ class PRArenaIssueResolver(IssueResolver):
                 # Gemini models work better with simplified tool schemas
                 if hasattr(llm_config, 'simplify_tools'):
                     llm_config.simplify_tools = True
-            
+
             if 'o4-mini' in model and hasattr(llm_config, 'top_p'):
                 # o4-mini models require top_p to be set to None
                 llm_config.top_p = None
-            
+
             if 'o3-mini' in model and hasattr(llm_config, 'top_p'):
                 # o3-mini models require top_p to be set to None
                 llm_config.top_p = None
-            
+
             if 'o1-mini' in model and hasattr(llm_config, 'top_p'):
                 # o1-mini models require top_p to be set to None
                 llm_config.top_p = None
-            
+
             if 'o1-mini' in model and hasattr(llm_config, 'stop'):
                 # o1-mini models require stop to be set to None
                 llm_config.stop = None
-            
-            
+
+
             self.llm_configs.append(llm_config)
-            
+
             # Only set api_version if it was explicitly provided, otherwise let LLMConfig handle it
             if api_version is not None:
                 llm_config.api_version = api_version
-        
+
         repo_instruction = None
         if args.repo_instruction_file:
             with open(args.repo_instruction_file, 'r') as f:
@@ -160,7 +160,7 @@ class PRArenaIssueResolver(IssueResolver):
         prompt_file = os.path.join(
             os.path.dirname(__file__), 'prompts/resolve/basic-with-tests.jinja'
         )
-        
+
         with open(prompt_file, 'r') as f:
             user_instructions_prompt_template = f.read()
 
@@ -184,15 +184,15 @@ class PRArenaIssueResolver(IssueResolver):
 
         raw_config = Secrets.get_firebase_config()
         self.firebase_config = load_firebase_config(raw_config)
-        
+
         # Initialize error tracker
         self.error_tracker = ErrorTracker(
             owner=self.owner,
-            repo=self.repo, 
+            repo=self.repo,
             issue_number=self.issue_number,
             token=self.token
         )
-        
+
     async def complete_runtime(
         self,
         runtime: Runtime,
@@ -208,11 +208,11 @@ class PRArenaIssueResolver(IssueResolver):
             "model1": self.llm_configs[0].model.split("/")[-1] if len(self.llm_configs) > 0 else "unknown",
             "model2": self.llm_configs[1].model.split("/")[-1] if len(self.llm_configs) > 1 else "unknown"
         }
-        
+
         try:
             llm_config = self.llm_configs[0]
             self.llm_config = llm_config
-            
+
             factory = IssueHandlerFactory(
                 owner=self.owner,
                 repo=self.repo,
@@ -225,17 +225,17 @@ class PRArenaIssueResolver(IssueResolver):
             )
             self.issue_handler = factory.create()
             self.output_dir = 'output1'  # Set output directory for the first model
-            
+
             resolver_output_1: CustomResolverOutput = await self.resolve_issue()
             # logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
-            
+
             resolver_output_1_dict = resolver_output_1.model_dump()
             resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
             resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
 
             llm_config = self.llm_configs[1]
             self.llm_config = llm_config
-            
+
             factory = IssueHandlerFactory(
                 owner=self.owner,
                 repo=self.repo,
@@ -248,10 +248,10 @@ class PRArenaIssueResolver(IssueResolver):
             )
             self.issue_handler = factory.create()
             self.output_dir = 'output2'
-            
+
             resolver_output_2: CustomResolverOutput = await self.resolve_issue()
             # logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
-            
+
             resolver_output_2_dict = resolver_output_2.model_dump()
             resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
             resolver_output_2 = CustomResolverOutput(**resolver_output_2_dict)
@@ -262,13 +262,13 @@ class PRArenaIssueResolver(IssueResolver):
                 resolved_output_2=resolver_output_2,
                 pr_type="draft"
             )
-            
+
             # Get UUID from environment for error tracking if needed
             uuid_ref = os.getenv("UUID")
-            
+
         except Exception as e:
             logger.error(f"Error in resolve_issues_with_random_models: {str(e)}")
-            
+
             # Log the error to error_collection
             try:
                 await self.error_tracker.log_error(
@@ -283,7 +283,7 @@ class PRArenaIssueResolver(IssueResolver):
                 )
             except Exception as tracking_error:
                 logger.error(f"Failed to log error to Firebase: {tracking_error}")
-            
+
             # Set FAILED=TRUE in GitHub environment
             github_env_path = os.getenv("GITHUB_ENV")
             if github_env_path:
@@ -292,7 +292,7 @@ class PRArenaIssueResolver(IssueResolver):
                         env_file.write("FAILED=TRUE\n")
                 except Exception as env_error:
                     logger.error(f"Failed to write to GITHUB_ENV: {env_error}")
-            
+
             # Re-raise the exception so workflow can handle it
             raise
 
@@ -314,11 +314,11 @@ class PRArenaIssueResolver(IssueResolver):
         """
         pathlib.Path("output1").mkdir(parents=True, exist_ok=True)
         pathlib.Path("output2").mkdir(parents=True, exist_ok=True)
-        
+
         file_name = "output.jsonl"
         output_file1 = pathlib.Path("output1") / file_name
         output_file2 = pathlib.Path("output2") / file_name
-        
+
         # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
         # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
         await self.get_new_commit_hash(
@@ -331,31 +331,31 @@ class PRArenaIssueResolver(IssueResolver):
             resolver_output=resolved_output_2,
             pr_type=pr_type
         )
-        
+
         # Write the resolved output to a JSONL file
         with open(output_file1, "a") as output_fp:
             output_fp.write(resolved_output_1.model_dump_json() + "\n")
-        
+
         with open(output_file2, "a") as output_fp:
             output_fp.write(resolved_output_2.model_dump_json() + "\n")
-        
+
         # Send the resolved output to Firebase Firestore
         cred = credentials.Certificate(self.firebase_config)
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
-            
+
         db = firestore.client()
-        
+
         current_time = firestore.SERVER_TIMESTAMP
-        
+
         repo_url = f"https://github.com/{self.owner}/{self.repo}"
-        
+
         # Extract issue details from the first resolver output (both should have the same issue)
         issue = resolved_output_1.issue
         issue_number = issue.number
         issue_title = issue.title
         issue_body = issue.body
-        
+
         # Collect language information
         language_info = get_comprehensive_language_info(
             owner=self.owner,
@@ -364,9 +364,9 @@ class PRArenaIssueResolver(IssueResolver):
             git_patch_1=resolved_output_1.git_patch,
             git_patch_2=resolved_output_2.git_patch
         )
-        
+
         # logger.info(f"Language information collected: {language_info}")
-        
+
         model_reference = {
             "claude-sonnet-4-20250514": "model1",
             "gpt-4.1-2025-04-14": "model2",
@@ -381,10 +381,10 @@ class PRArenaIssueResolver(IssueResolver):
             "kimi-k2-0711-preview": "model11",
             "gemini-2.5-pro-preview-06-05": "model12",
         }
-        
+
         model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
         model2_id = model_reference.get((cast(str, resolved_output_2.model)), "Model ID Not Found")
-        
+
         if not resolved_output_1.git_patch or not resolved_output_2.git_patch:
             issue_data = {
                 "repo_url": repo_url,
@@ -416,12 +416,12 @@ class PRArenaIssueResolver(IssueResolver):
                 "updatedAt": current_time,
                 "installationToken": self.token
             }
-            
+
             reference_id = str(uuid.uuid4())
-            
+
             issue_ref = db.collection("issue_collection").document(reference_id)
             issue_ref.set(issue_data)
-            
+
             github_env_path = os.getenv("GITHUB_ENV")
             if not github_env_path:
                 raise RuntimeError("GITHUB_ENV environment variable is not set.")
@@ -429,9 +429,9 @@ class PRArenaIssueResolver(IssueResolver):
             # Write the decision to the environment file
             with open(github_env_path, "a") as env_file:
                 env_file.write("FAILED=TRUE\n")
-            
+
             return
-        
+
         issue_data = {
             "repo_url": repo_url,
             "issue_number": issue_number,
@@ -462,12 +462,12 @@ class PRArenaIssueResolver(IssueResolver):
             "updatedAt": current_time,
             "installationToken": self.token
         }
-        
+
         reference_id = str(uuid.uuid4())
-        
+
         issue_ref = db.collection("issue_collection").document(reference_id)
         issue_ref.set(issue_data)
-        
+
         current_time = firestore.SERVER_TIMESTAMP
 
         user_data = {
@@ -497,11 +497,11 @@ class PRArenaIssueResolver(IssueResolver):
                 }
             }
         }
-        
+
         # Store in user_collection with owner as document ID
         user_ref = db.collection("userdata_collection").document(self.owner)
         user_ref.set(user_data, merge=True)
-        
+
         github_env_path = os.getenv("GITHUB_ENV")
         if not github_env_path:
             raise RuntimeError("GITHUB_ENV environment variable is not set.")
@@ -510,11 +510,11 @@ class PRArenaIssueResolver(IssueResolver):
         with open(github_env_path, "a") as env_file:
             env_file.write(f"UUID={reference_id}\n")
             env_file.write("FAILED=FALSE\n")
-        
+
         # print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
         # print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
 
-    
+
     async def resolve_issue(
         self,
         reset_logger: bool = False,
@@ -527,7 +527,7 @@ class PRArenaIssueResolver(IssueResolver):
         start_time = time.time()
         output = None
         customOutput = None
-        
+
         # Load dataset
         issues: list[Issue] = self.issue_handler.get_converted_issues(
             issue_numbers=[self.issue_number], comment_id=self.comment_id
@@ -615,7 +615,7 @@ class PRArenaIssueResolver(IssueResolver):
         logger.info(
             f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model **MODEL NAME REDACTED**, max iterations {self.max_iterations}.'
         )
-        
+
         try:
             # checkout to pr branch if needed
             if self.issue_type == 'pr':
@@ -646,7 +646,7 @@ class PRArenaIssueResolver(IssueResolver):
                     .decode('utf-8')
                     .strip()
                 )
-            
+
             logger.info(
                 f'Issue Resolve - Using base commit {base_commit} for issue {issue.number}\nOutput successfully written to {output_file}'
             )
@@ -657,16 +657,16 @@ class PRArenaIssueResolver(IssueResolver):
                 self.issue_handler,
                 reset_logger,
             )
-            
+
             customOutput = CustomResolverOutput(**output.model_dump())
 
         finally:
             logger.info('Finished.')
-            
+
             end_time = time.time()
             duration = end_time - start_time
             logger.info(f"Total time taken: {duration} seconds")
-            
+
             if customOutput is not None:  # Check if customOutput was created
                 customOutput.duration = duration
                 # logger.info(f"Output: {customOutput}")
@@ -688,8 +688,8 @@ class PRArenaIssueResolver(IssueResolver):
                     duration=duration
                 )
                 return error_output
-    
-    
+
+
     async def get_new_commit_hash(
         self,
         output_dir,
@@ -706,7 +706,7 @@ class PRArenaIssueResolver(IssueResolver):
 
         # logger.info(f"[DEBUG] Previous Patched Repo Dir: {patched_repo_dir}")
         branch_name, default_branch, base_url, headers = None, None, None, None
-        
+
         if resolver_output.git_patch:
             # 2) apply_patch
             apply_patch(patched_repo_dir, resolver_output.git_patch)
@@ -715,13 +715,13 @@ class PRArenaIssueResolver(IssueResolver):
             # logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
             # make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
             make_commit_with_summary(patched_repo_dir, resolver_output.issue, resolver_output.issue_type, resolver_output, branch_name, output_dir)
-            
+
             # 4) branch checkout and push
             branch_name, default_branch, base_url, headers = self.prepare_branch_and_push(
                 patch_dir=patched_repo_dir,
                 pr_type=pr_type,
             )
-        
+
         resolver_output.branch_name = branch_name
         resolver_output.default_branch = default_branch
         resolver_output.base_url = base_url
@@ -737,8 +737,8 @@ class PRArenaIssueResolver(IssueResolver):
         resolver_output.repo_dir = patched_repo_dir
 
         return
-    
-    
+
+
     def prepare_branch_and_push(
         self,
         patch_dir: str,
@@ -812,16 +812,16 @@ class PRArenaIssueResolver(IssueResolver):
             raise RuntimeError("Failed to push changes to the remote repository")
 
         return branch_name, default_branch, base_url, headers
-    
+
 def main() -> None:
     import argparse
-    
+
     def int_or_none(value: str) -> int | None:
         if value.lower() == 'none':
             return None
         else:
             return int(value)
-        
+
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
     parser.add_argument(
         '--selected-repo',
@@ -935,7 +935,7 @@ def main() -> None:
 
     my_args = parser.parse_args()
     issue_resolver = PRArenaIssueResolver(my_args)
-    
+
     asyncio.run(
         issue_resolver.resolve_issues_with_random_models()
     )
