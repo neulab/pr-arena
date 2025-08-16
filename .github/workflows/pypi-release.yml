@@ -1,0 +1,57 @@
+# Publishes the PR-Arena PyPI package
+name: Publish PyPI Package
+
+# Triggered manually or on version tags
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual trigger'
+        required: true
+        default: ''
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+          
+      - name: Install Poetry
+        uses: snok/install-poetry@v1.4.1
+        with:
+          virtualenvs-in-project: true
+          virtualenvs-path: ~/.virtualenvs
+          
+      - name: Install Poetry Dependencies
+        run: poetry install --no-interaction --no-root
+        
+      - name: Build poetry project
+        run: poetry build
+        
+      - name: Publish
+        run: poetry publish -u __token__ -p ${{ secrets.PYPI_TOKEN }}
+        
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const tagName = context.ref.replace('refs/tags/', '');
+            
+            await github.rest.repos.createRelease({
+              owner,
+              repo,
+              tag_name: tagName,
+              name: `Release ${tagName}`,
+              body: `Release ${tagName} published to PyPI`,
+              draft: false,
+              prerelease: false
+            });
