@@ -3,12 +3,25 @@ requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
-name = "resolver"
+name = "pr-arena"
 version = "0.1.0"
 description = "PR-Arena: Arena Setting for GitHub Issue Resolver"
 authors = ["OpenHands"]
 license = "MIT"
 readme = "README.md"
+homepage = "https://github.com/neulab/pr-arena"
+repository = "https://github.com/neulab/pr-arena"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Bug Tracking",
+    "Topic :: Software Development :: Version Control :: Git"
+]
 packages = [
     { include = "resolver" }
 ]
