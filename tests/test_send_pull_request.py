@@ -493,6 +493,7 @@ class TestProcessSingleIssue(unittest.TestCase):
         self.mock_resolver_output.success = True
         self.mock_resolver_output.branch_name = "test-branch"
         self.mock_resolver_output.result_explanation = "Test explanation"
+        self.mock_resolver_output.git_patch = "diff --git a/test.py b/test.py\n+print('hello')"
 
     def test_process_single_issue_invalid_type(self):
         """Test process_single_issue with invalid issue type"""
@@ -542,6 +543,45 @@ class TestProcessSingleIssue(unittest.TestCase):
         )
         
         mock_send_pr.assert_called_once()
+
+    def test_process_single_issue_empty_patch(self):
+        """Test processing issue with empty git patch"""
+        self.mock_resolver_output.git_patch = ""  # Empty patch
+        
+        with patch('resolver.send_pull_request.send_pull_request') as mock_send_pr:
+            process_single_issue(
+                "output1", self.mock_resolver_output, "token", "user",
+                ProviderType.GITHUB, "draft", None, None, False
+            )
+            
+            # Should not call send_pull_request for empty patches
+            mock_send_pr.assert_not_called()
+
+    def test_process_single_issue_whitespace_only_patch(self):
+        """Test processing issue with whitespace-only git patch"""
+        self.mock_resolver_output.git_patch = "   \n\t  \n  "  # Whitespace only
+        
+        with patch('resolver.send_pull_request.send_pull_request') as mock_send_pr:
+            process_single_issue(
+                "output1", self.mock_resolver_output, "token", "user",
+                ProviderType.GITHUB, "draft", None, None, False
+            )
+            
+            # Should not call send_pull_request for whitespace-only patches
+            mock_send_pr.assert_not_called()
+
+    def test_process_single_issue_none_patch(self):
+        """Test processing issue with None git patch"""
+        self.mock_resolver_output.git_patch = None  # No patch
+        
+        with patch('resolver.send_pull_request.send_pull_request') as mock_send_pr:
+            process_single_issue(
+                "output1", self.mock_resolver_output, "token", "user",
+                ProviderType.GITHUB, "draft", None, None, False
+            )
+            
+            # Should not call send_pull_request for None patches
+            mock_send_pr.assert_not_called()
 
 
 if __name__ == '__main__':
