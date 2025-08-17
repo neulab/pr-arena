@@ -210,54 +210,22 @@ class PRArenaIssueResolver(IssueResolver):
         }
 
         try:
-            llm_config = self.llm_configs[0]
-            self.llm_config = llm_config
-
-            factory = IssueHandlerFactory(
-                owner=self.owner,
-                repo=self.repo,
-                token=self.token,
-                username=self.username,
-                platform=self.platform,
-                base_domain='github.com',
-                issue_type=self.issue_type,
-                llm_config=llm_config,
+            # Run both agents in parallel using asyncio.gather
+            # return_exceptions=True ensures we can handle individual failures
+            resolver_output_1, resolver_output_2 = await asyncio.gather(
+                self._resolve_with_model(model_index=0, output_dir='output1'),
+                self._resolve_with_model(model_index=1, output_dir='output2'),
+                return_exceptions=True
             )
-            self.issue_handler = factory.create()
-            self.output_dir = 'output1'  # Set output directory for the first model
 
-            resolver_output_1: CustomResolverOutput = await self.resolve_issue()
-            # logger.info(f"Issue Resolve - Resolver Output 1: {resolver_output_1}")
+            # Handle exceptions from either task
+            if isinstance(resolver_output_1, Exception):
+                raise resolver_output_1
+            if isinstance(resolver_output_2, Exception):
+                raise resolver_output_2
 
-            resolver_output_1_dict = resolver_output_1.model_dump()
-            resolver_output_1_dict['model'] = self.llm_config.model.split("/")[-1]
-            resolver_output_1 = CustomResolverOutput(**resolver_output_1_dict)
-
-            llm_config = self.llm_configs[1]
-            self.llm_config = llm_config
-
-            factory = IssueHandlerFactory(
-                owner=self.owner,
-                repo=self.repo,
-                token=self.token,
-                username=self.username,
-                platform=self.platform,
-                base_domain='github.com',
-                issue_type=self.issue_type,
-                llm_config=llm_config,
-            )
-            self.issue_handler = factory.create()
-            self.output_dir = 'output2'
-
-            resolver_output_2: CustomResolverOutput = await self.resolve_issue()
-            # logger.info(f"Issue Resolve - Resolver Output 2: {resolver_output_2}")
-
-            resolver_output_2_dict = resolver_output_2.model_dump()
-            resolver_output_2_dict['model'] = self.llm_config.model.split("/")[-1]
-            resolver_output_2 = CustomResolverOutput(**resolver_output_2_dict)
-
-            # TODO: Send commit hash to the firebase.
-            await self.send_to_firebase (
+            # Send both outputs to Firebase after both complete
+            await self.send_to_firebase(
                 resolved_output_1=resolver_output_1,
                 resolved_output_2=resolver_output_2,
                 pr_type="draft"
@@ -271,6 +239,16 @@ class PRArenaIssueResolver(IssueResolver):
 
             # Log the error to error_collection
             try:
+                # Check if this was a git patch empty error
+                git_patch_empty = "Openhands failed to make code changes" in str(e)
+                
+                # Determine which model caused the error
+                model_error_details = None
+                if models_info:
+                    model_names = list(models_info.values())
+                    if model_names:
+                        model_error_details = f"Error occurred with models: {', '.join(model_names)}"
+                
                 await self.error_tracker.log_error(
                     error_type="agent_failure",
                     error_message=f"Agent failed during issue resolution: {str(e)}",
@@ -279,7 +257,9 @@ class PRArenaIssueResolver(IssueResolver):
                     additional_context={
                         "stage": "issue_resolution",
                         "exception_type": type(e).__name__
-                    }
+                    },
+                    git_patch_empty=git_patch_empty,
+                    model_error_details=model_error_details
                 )
             except Exception as tracking_error:
                 logger.error(f"Failed to log error to Firebase: {tracking_error}")
@@ -695,6 +675,85 @@ class PRArenaIssueResolver(IssueResolver):
 
         return
 
+    async def _resolve_with_model(self, model_index: int, output_dir: str) -> CustomResolverOutput:
+        """Resolve issue with a specific model configuration.
+        
+        This method creates a completely independent resolver context for parallel execution,
+        ensuring no shared state between concurrent model runs.
+        
+        Args:
+            model_index: Index of the model configuration to use (0 or 1)
+            output_dir: Output directory for this model's results
+            
+        Returns:
+            CustomResolverOutput: The resolved output for this model
+        """
+        llm_config = self.llm_configs[model_index]
+        
+        # Create a completely independent issue handler factory for this model
+        # This ensures thread safety and no shared state between parallel executions
+        factory = IssueHandlerFactory(
+            owner=self.owner,
+            repo=self.repo,
+            token=self.token,
+            username=self.username,
+            platform=self.platform,
+            base_domain='github.com',
+            issue_type=self.issue_type,
+            llm_config=llm_config,
+        )
+        
+        # Create independent issue handler for this execution
+        issue_handler = factory.create()
+        
+        # Store current instance state to avoid conflicts
+        current_llm_config = self.llm_config if hasattr(self, 'llm_config') else None
+        current_issue_handler = self.issue_handler if hasattr(self, 'issue_handler') else None
+        current_output_dir = self.output_dir if hasattr(self, 'output_dir') else None
+        current_error_tracker_issue_info = (self.error_tracker.issue_title, self.error_tracker.issue_body)
+        
+        # Create a temporary backup of instance state for safe parallel execution
+        backup_state = {
+            'llm_config': current_llm_config,
+            'issue_handler': current_issue_handler, 
+            'output_dir': current_output_dir
+        }
+        
+        try:
+            # Temporarily set instance variables for this model's execution
+            # This allows resolve_issue() to access the correct configuration
+            self.llm_config = llm_config
+            self.issue_handler = issue_handler
+            self.output_dir = output_dir
+            
+            # Resolve the issue with this specific model configuration
+            # This is the main time-consuming operation that benefits from parallelization
+            resolver_output = await self.resolve_issue()
+            
+            # Update the output with the correct model name for identification
+            resolver_output_dict = resolver_output.model_dump()
+            resolver_output_dict['model'] = llm_config.model.split("/")[-1]
+            resolved_output = CustomResolverOutput(**resolver_output_dict)
+            
+            return resolved_output
+            
+        except Exception as e:
+            # Ensure proper exception handling for parallel execution
+            logger.error(f"Error in _resolve_with_model for model {model_index}: {str(e)}")
+            raise
+            
+        finally:
+            # Restore the original instance state to avoid affecting other operations
+            # This is critical for maintaining consistency in parallel execution
+            for key, value in backup_state.items():
+                if value is not None:
+                    setattr(self, key, value)
+                elif hasattr(self, key):
+                    delattr(self, key)
+            
+            # Restore error tracker issue info if it was changed
+            if current_error_tracker_issue_info != (None, None):
+                self.error_tracker.set_issue_info(*current_error_tracker_issue_info)
 
     def prepare_branch_and_push(
         self,
