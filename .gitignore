@@ -14,5 +14,5 @@ model_test_logs/
 test_output_*/
 
 # Virtual environment
-venv/
+.venv/
 test_models_env/

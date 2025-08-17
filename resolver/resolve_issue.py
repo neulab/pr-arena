@@ -39,12 +39,12 @@ from openhands.resolver.resolver_output import ResolverOutput  # noqa: E402
 from openhands.runtime import Runtime  # noqa: E402
 
 # Don't make this configurable for now, unless we have other competitive agents
-AGENT_CLASS = 'CodeActAgent'
+AGENT_CLASS = "CodeActAgent"
 
 
 class PRArenaIssueResolver(IssueResolver):
     """PR Arena Issue Resolver that processes issues with multiple LLM models."""
-    
+
     # Type annotations for class attributes
     llm_config: LLMConfig
     issue_handler: Any  # This will be set dynamically in _resolve_with_model
@@ -60,28 +60,28 @@ class PRArenaIssueResolver(IssueResolver):
             args.is_experimental,
         )
 
-        parts = args.selected_repo.rsplit('/', 1)
+        parts = args.selected_repo.rsplit("/", 1)
         if len(parts) < 2:
-            raise ValueError('Invalid repository format. Expected owner/repo')
+            raise ValueError("Invalid repository format. Expected owner/repo")
         owner, repo = parts
 
-        token = args.token or os.getenv('GITHUB_TOKEN') or os.getenv('GITLAB_TOKEN')
-        username = args.username if args.username else os.getenv('GIT_USERNAME')
+        token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GITLAB_TOKEN")
+        username = args.username if args.username else os.getenv("GIT_USERNAME")
         if not username:
-            raise ValueError('Username is required.')
+            raise ValueError("Username is required.")
 
         if not token:
-            raise ValueError('Token is required.')
+            raise ValueError("Token is required.")
 
         platform = ProviderType.GITHUB
 
         base_url = args.llm_base_url
-        api_version = os.environ.get('LLM_API_VERSION', None)
-        llm_num_retries = int(os.environ.get('LLM_NUM_RETRIES', '4'))
-        llm_retry_min_wait = int(os.environ.get('LLM_RETRY_MIN_WAIT', '5'))
-        llm_retry_max_wait = int(os.environ.get('LLM_RETRY_MAX_WAIT', '30'))
-        llm_retry_multiplier = int(os.environ.get('LLM_RETRY_MULTIPLIER', 2))
-        llm_timeout = int(os.environ.get('LLM_TIMEOUT', 0))
+        api_version = os.environ.get("LLM_API_VERSION", None)
+        llm_num_retries = int(os.environ.get("LLM_NUM_RETRIES", "4"))
+        llm_retry_min_wait = int(os.environ.get("LLM_RETRY_MIN_WAIT", "5"))
+        llm_retry_max_wait = int(os.environ.get("LLM_RETRY_MAX_WAIT", "30"))
+        llm_retry_multiplier = int(os.environ.get("LLM_RETRY_MULTIPLIER", 2))
+        llm_timeout = int(os.environ.get("LLM_TIMEOUT", 0))
 
         # Initialize values for custom resolver
         self.token = token
@@ -103,10 +103,10 @@ class PRArenaIssueResolver(IssueResolver):
         for model in selected_models:
             # Determine if this model needs special parameter handling
             needs_drop_params = (
-                'o1-mini' in model
-                or 'o3-mini' in model
-                or 'o4-mini' in model
-                or 'gemini' in model.lower()
+                "o1-mini" in model
+                or "o3-mini" in model
+                or "o4-mini" in model
+                or "gemini" in model.lower()
             )
 
             # Create LLMConfig instance
@@ -122,31 +122,30 @@ class PRArenaIssueResolver(IssueResolver):
                 drop_params=needs_drop_params,
             )
 
-            if 'gemini' in model.lower():
+            if "gemini" in model.lower():
                 # Gemini models have specific limitations on tool formats
                 # Set additional Gemini-specific configurations if needed
-                if hasattr(llm_config, 'supports_function_calling'):
+                if hasattr(llm_config, "supports_function_calling"):
                     llm_config.supports_function_calling = True
                 # Gemini models work better with simplified tool schemas
-                if hasattr(llm_config, 'simplify_tools'):
+                if hasattr(llm_config, "simplify_tools"):
                     llm_config.simplify_tools = True
 
-            if 'o4-mini' in model and hasattr(llm_config, 'top_p'):
+            if "o4-mini" in model and hasattr(llm_config, "top_p"):
                 # o4-mini models require top_p to be set to None
                 llm_config.top_p = None
 
-            if 'o3-mini' in model and hasattr(llm_config, 'top_p'):
+            if "o3-mini" in model and hasattr(llm_config, "top_p"):
                 # o3-mini models require top_p to be set to None
                 llm_config.top_p = None
 
-            if 'o1-mini' in model and hasattr(llm_config, 'top_p'):
+            if "o1-mini" in model and hasattr(llm_config, "top_p"):
                 # o1-mini models require top_p to be set to None
                 llm_config.top_p = None
 
-            if 'o1-mini' in model and hasattr(llm_config, 'stop'):
+            if "o1-mini" in model and hasattr(llm_config, "stop"):
                 # o1-mini models require stop to be set to None
                 llm_config.stop = None
-
 
             self.llm_configs.append(llm_config)
 
@@ -156,21 +155,21 @@ class PRArenaIssueResolver(IssueResolver):
 
         repo_instruction = None
         if args.repo_instruction_file:
-            with open(args.repo_instruction_file, 'r') as f:
+            with open(args.repo_instruction_file, "r") as f:
                 repo_instruction = f.read()
 
         issue_type = args.issue_type
 
         # Read the prompt template
         prompt_file = os.path.join(
-            os.path.dirname(__file__), 'prompts/resolve/basic-with-tests.jinja'
+            os.path.dirname(__file__), "prompts/resolve/basic-with-tests.jinja"
         )
 
-        with open(prompt_file, 'r') as f:
+        with open(prompt_file, "r") as f:
             user_instructions_prompt_template = f.read()
 
         with open(
-            prompt_file.replace('.jinja', '-conversation-instructions.jinja')
+            prompt_file.replace(".jinja", "-conversation-instructions.jinja")
         ) as f:
             conversation_instructions_prompt_template = f.read()
 
@@ -195,7 +194,7 @@ class PRArenaIssueResolver(IssueResolver):
             owner=self.owner,
             repo=self.repo,
             issue_number=self.issue_number,
-            token=self.token
+            token=self.token,
         )
 
     async def complete_runtime(
@@ -210,23 +209,27 @@ class PRArenaIssueResolver(IssueResolver):
     async def resolve_issues_with_random_models(self) -> None:
         uuid_ref = None
         models_info = {
-            "model1": self.llm_configs[0].model.split("/")[-1] if len(self.llm_configs) > 0 else "unknown",
-            "model2": self.llm_configs[1].model.split("/")[-1] if len(self.llm_configs) > 1 else "unknown"
+            "model1": self.llm_configs[0].model.split("/")[-1]
+            if len(self.llm_configs) > 0
+            else "unknown",
+            "model2": self.llm_configs[1].model.split("/")[-1]
+            if len(self.llm_configs) > 1
+            else "unknown",
         }
 
         try:
             # Run both agents in parallel using asyncio.gather
             # return_exceptions=True ensures we can handle individual failures
             results = await asyncio.gather(
-                self._resolve_with_model(model_index=0, output_dir='output1'),
-                self._resolve_with_model(model_index=1, output_dir='output2'),
-                return_exceptions=True
+                self._resolve_with_model(model_index=0, output_dir="output1"),
+                self._resolve_with_model(model_index=1, output_dir="output2"),
+                return_exceptions=True,
             )
 
             # Handle exceptions from either task
             resolver_output_1 = results[0]
             resolver_output_2 = results[1]
-            
+
             if isinstance(resolver_output_1, Exception):
                 raise resolver_output_1
             if isinstance(resolver_output_2, Exception):
@@ -236,11 +239,11 @@ class PRArenaIssueResolver(IssueResolver):
             # Type assertions to help mypy understand these are CustomResolverOutput
             assert isinstance(resolver_output_1, CustomResolverOutput)
             assert isinstance(resolver_output_2, CustomResolverOutput)
-            
+
             await self.send_to_firebase(
                 resolved_output_1=resolver_output_1,
                 resolved_output_2=resolver_output_2,
-                pr_type="draft"
+                pr_type="draft",
             )
 
             # Get UUID from environment for error tracking if needed
@@ -253,14 +256,16 @@ class PRArenaIssueResolver(IssueResolver):
             try:
                 # Check if this was a git patch empty error
                 git_patch_empty = "Openhands failed to make code changes" in str(e)
-                
+
                 # Determine which model caused the error
                 model_error_details = None
                 if models_info:
                     model_names = list(models_info.values())
                     if model_names:
-                        model_error_details = f"Error occurred with models: {', '.join(model_names)}"
-                
+                        model_error_details = (
+                            f"Error occurred with models: {', '.join(model_names)}"
+                        )
+
                 await self.error_tracker.log_error(
                     error_type="agent_failure",
                     error_message=f"Agent failed during issue resolution: {str(e)}",
@@ -268,10 +273,10 @@ class PRArenaIssueResolver(IssueResolver):
                     models=models_info,
                     additional_context={
                         "stage": "issue_resolution",
-                        "exception_type": type(e).__name__
+                        "exception_type": type(e).__name__,
                     },
                     git_patch_empty=git_patch_empty,
-                    model_error_details=model_error_details
+                    model_error_details=model_error_details,
                 )
             except Exception as tracking_error:
                 logger.error(f"Failed to log error to Firebase: {tracking_error}")
@@ -288,7 +293,66 @@ class PRArenaIssueResolver(IssueResolver):
             # Re-raise the exception so workflow can handle it
             raise
 
-    async def send_to_firebase (
+    async def _check_and_log_empty_patches(
+        self,
+        resolved_output_1: CustomResolverOutput,
+        resolved_output_2: CustomResolverOutput,
+        uuid_ref: str,
+    ) -> None:
+        """Check for empty git patches in successful resolutions and log them."""
+        models_info = {
+            "model1": resolved_output_1.model
+            if hasattr(resolved_output_1, "model") and resolved_output_1.model
+            else "unknown",
+            "model2": resolved_output_2.model
+            if hasattr(resolved_output_2, "model") and resolved_output_2.model
+            else "unknown",
+        }
+
+        # Check if either model produced an empty patch
+        model1_empty = (
+            not resolved_output_1.git_patch or resolved_output_1.git_patch.strip() == ""
+        )
+        model2_empty = (
+            not resolved_output_2.git_patch or resolved_output_2.git_patch.strip() == ""
+        )
+
+        if model1_empty or model2_empty:
+            empty_models = []
+            if model1_empty:
+                empty_models.append(f"model1 ({models_info['model1']})")
+            if model2_empty:
+                empty_models.append(f"model2 ({models_info['model2']})")
+
+            error_message = (
+                f"One or more models produced empty patches: {', '.join(empty_models)}"
+            )
+            model_error_details = f"Empty patches from: {', '.join(empty_models)}"
+
+            try:
+                await self.error_tracker.log_error(
+                    error_type="empty_patch_success",
+                    error_message=error_message,
+                    uuid_ref=uuid_ref,
+                    models=models_info,
+                    additional_context={
+                        "stage": "successful_resolution_with_empty_patch",
+                        "model1_empty": model1_empty,
+                        "model2_empty": model2_empty,
+                        "both_empty": model1_empty and model2_empty,
+                    },
+                    git_patch_empty=True,
+                    model_error_details=model_error_details,
+                )
+                logger.info(
+                    f"Logged empty patch tracking for successful resolution: {error_message}"
+                )
+            except Exception as tracking_error:
+                logger.error(
+                    f"Failed to log empty patch tracking to Firebase: {tracking_error}"
+                )
+
+    async def send_to_firebase(
         self,
         resolved_output_1: CustomResolverOutput,
         resolved_output_2: CustomResolverOutput,
@@ -314,14 +378,10 @@ class PRArenaIssueResolver(IssueResolver):
         # [PR-Arena] Retrieve commit hash and send it to firesbase as well.
         # And somehow save the file somewhere so that send_pull_request.py could get the file (new commit).
         await self.get_new_commit_hash(
-            output_dir="output1",
-            resolver_output=resolved_output_1,
-            pr_type=pr_type
+            output_dir="output1", resolver_output=resolved_output_1, pr_type=pr_type
         )
         await self.get_new_commit_hash(
-            output_dir="output2",
-            resolver_output=resolved_output_2,
-            pr_type=pr_type
+            output_dir="output2", resolver_output=resolved_output_2, pr_type=pr_type
         )
 
         # Write the resolved output to a JSONL file
@@ -354,7 +414,7 @@ class PRArenaIssueResolver(IssueResolver):
             repo=self.repo,
             token=self.token,
             git_patch_1=resolved_output_1.git_patch,
-            git_patch_2=resolved_output_2.git_patch
+            git_patch_2=resolved_output_2.git_patch,
         )
 
         # logger.info(f"Language information collected: {language_info}")
@@ -374,8 +434,12 @@ class PRArenaIssueResolver(IssueResolver):
             "gemini-2.5-pro-preview-06-05": "model12",
         }
 
-        model1_id = model_reference.get((cast(str, resolved_output_1.model)), "Model ID Not Found")
-        model2_id = model_reference.get((cast(str, resolved_output_2.model)), "Model ID Not Found")
+        model1_id = model_reference.get(
+            (cast(str, resolved_output_1.model)), "Model ID Not Found"
+        )
+        model2_id = model_reference.get(
+            (cast(str, resolved_output_2.model)), "Model ID Not Found"
+        )
 
         # Create unified issue data structure that handles both empty and non-empty patches
         issue_data = {
@@ -392,21 +456,29 @@ class PRArenaIssueResolver(IssueResolver):
                     "modelId": model1_id,
                     "modelName": resolved_output_1.model,
                     "commit_hash": resolved_output_1.commit_hash,
-                    "agent_code": resolved_output_1.git_patch if resolved_output_1.git_patch else "",
-                    "duration": resolved_output_1.duration if resolved_output_1.duration else None
+                    "agent_code": resolved_output_1.git_patch
+                    if resolved_output_1.git_patch
+                    else "",
+                    "duration": resolved_output_1.duration
+                    if resolved_output_1.duration
+                    else None,
                 },
                 "modelB": {
                     "modelId": model2_id,
                     "modelName": resolved_output_2.model,
                     "commit_hash": resolved_output_2.commit_hash,
-                    "agent_code": resolved_output_2.git_patch if resolved_output_2.git_patch else "",
-                    "duration": resolved_output_2.duration if resolved_output_2.duration else None
-                }
+                    "agent_code": resolved_output_2.git_patch
+                    if resolved_output_2.git_patch
+                    else "",
+                    "duration": resolved_output_2.duration
+                    if resolved_output_2.duration
+                    else None,
+                },
             },
             "winner": None,  # No winner determined yet
             "createdAt": current_time,
             "updatedAt": current_time,
-            "installationToken": self.token
+            "installationToken": self.token,
         }
 
         reference_id = str(uuid.uuid4())
@@ -429,24 +501,35 @@ class PRArenaIssueResolver(IssueResolver):
                     "language": "en",  # Default language
                     "isAnonymous": True,
                     "deduplicated": True,
-                    "programming_language": language_info.get("primary_language", "Unknown"),
-                    "repo_languages": language_info.get("repo_language_percentages", {}),
-                    "patch_languages": language_info.get("patch_language_percentages", {}),
+                    "programming_language": language_info.get(
+                        "primary_language", "Unknown"
+                    ),
+                    "repo_languages": language_info.get(
+                        "repo_language_percentages", {}
+                    ),
+                    "patch_languages": language_info.get(
+                        "patch_language_percentages", {}
+                    ),
                     "modelA": {
                         "modelId": model1_id,
-                        "modelName": resolved_output_1.model
+                        "modelName": resolved_output_1.model,
                     },
                     "modelB": {
                         "modelId": model2_id,
-                        "modelName": resolved_output_2.model
-                    }
+                        "modelName": resolved_output_2.model,
+                    },
                 }
-            }
+            },
         }
 
         # Store in user_collection with owner as document ID
         user_ref = db.collection("userdata_collection").document(self.owner)
         user_ref.set(user_data, merge=True)
+
+        # Check for empty patches and log them
+        await self._check_and_log_empty_patches(
+            resolved_output_1, resolved_output_2, reference_id
+        )
 
         github_env_path = os.getenv("GITHUB_ENV")
         if not github_env_path:
@@ -459,7 +542,6 @@ class PRArenaIssueResolver(IssueResolver):
 
         # print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
         # print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
-
 
     async def resolve_issue(
         self,
@@ -481,123 +563,123 @@ class PRArenaIssueResolver(IssueResolver):
 
         if not issues:
             raise ValueError(
-                f'No issues found for issue number {self.issue_number}. Please verify that:\n'
-                f'1. The issue/PR #{self.issue_number} exists in the repository {self.owner}/{self.repo}\n'
-                f'2. You have the correct permissions to access it\n'
-                f'3. The repository name is spelled correctly'
+                f"No issues found for issue number {self.issue_number}. Please verify that:\n"
+                f"1. The issue/PR #{self.issue_number} exists in the repository {self.owner}/{self.repo}\n"
+                f"2. You have the correct permissions to access it\n"
+                f"3. The repository name is spelled correctly"
             )
 
         issue = issues[0]
-        
+
         # Update error tracker with issue information
         self.error_tracker.set_issue_info(issue.title, issue.body)
 
         if self.comment_id is not None:
             if (
-                self.issue_type == 'pr'
+                self.issue_type == "pr"
                 and not issue.review_comments
                 and not issue.review_threads
                 and not issue.thread_comments
             ):
                 raise ValueError(
-                    f'Comment ID {self.comment_id} did not have a match for issue {issue.number}'
+                    f"Comment ID {self.comment_id} did not have a match for issue {issue.number}"
                 )
 
-            if self.issue_type == 'issue' and not issue.thread_comments:
+            if self.issue_type == "issue" and not issue.thread_comments:
                 raise ValueError(
-                    f'Comment ID {self.comment_id} did not have a match for issue {issue.number}'
+                    f"Comment ID {self.comment_id} did not have a match for issue {issue.number}"
                 )
 
         # Setup directories
         pathlib.Path(self.output_dir).mkdir(parents=True, exist_ok=True)
-        pathlib.Path(os.path.join(self.output_dir, 'infer_logs')).mkdir(
+        pathlib.Path(os.path.join(self.output_dir, "infer_logs")).mkdir(
             parents=True, exist_ok=True
         )
-        logger.info(f'Using output directory: {self.output_dir}')
+        logger.info(f"Using output directory: {self.output_dir}")
 
         # checkout the repo
-        repo_dir = os.path.join(self.output_dir, 'repo')
+        repo_dir = os.path.join(self.output_dir, "repo")
         if not os.path.exists(repo_dir):
             checkout_output = subprocess.check_output(
                 [
-                    'git',
-                    'clone',
+                    "git",
+                    "clone",
                     self.issue_handler.get_clone_url(),
-                    f'{self.output_dir}/repo',
+                    f"{self.output_dir}/repo",
                 ]
-            ).decode('utf-8')
-            if 'fatal' in checkout_output:
-                raise RuntimeError(f'Failed to clone repository: {checkout_output}')
+            ).decode("utf-8")
+            if "fatal" in checkout_output:
+                raise RuntimeError(f"Failed to clone repository: {checkout_output}")
 
         # get the commit id of current repo for reproducibility
         base_commit = (
-            subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)
-            .decode('utf-8')
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir)
+            .decode("utf-8")
             .strip()
         )
-        logger.info(f'Base commit: {base_commit}')
+        logger.info(f"Base commit: {base_commit}")
 
         if self.repo_instruction is None:
             # Check for .openhands_instructions file in the workspace directory
             openhands_instructions_path = os.path.join(
-                repo_dir, '.openhands_instructions'
+                repo_dir, ".openhands_instructions"
             )
             if os.path.exists(openhands_instructions_path):
-                with open(openhands_instructions_path, 'r') as f:
+                with open(openhands_instructions_path, "r") as f:
                     self.repo_instruction = f.read()
 
         # OUTPUT FILE
-        output_file = os.path.join(self.output_dir, 'output.jsonl')
-        logger.info(f'Writing output to {output_file}')
+        output_file = os.path.join(self.output_dir, "output.jsonl")
+        logger.info(f"Writing output to {output_file}")
 
         # Check if this issue was already processed
         if os.path.exists(output_file):
-            with open(output_file, 'r') as f:
+            with open(output_file, "r") as f:
                 for line in f:
                     data = ResolverOutput.model_validate_json(line)
                     if data.issue.number == self.issue_number:
                         logger.warning(
-                            f'Issue {self.issue_number} was already processed. Skipping.'
+                            f"Issue {self.issue_number} was already processed. Skipping."
                         )
                         return CustomResolverOutput(**data.model_dump())
 
         logger.info(
-            f'Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model **MODEL NAME REDACTED**, max iterations {self.max_iterations}.'
+            f"Resolving issue {self.issue_number} with Agent {AGENT_CLASS}, model **MODEL NAME REDACTED**, max iterations {self.max_iterations}."
         )
 
         try:
             # checkout to pr branch if needed
-            if self.issue_type == 'pr':
+            if self.issue_type == "pr":
                 branch_to_use = issue.head_branch
                 logger.info(
-                    f'Checking out to PR branch {branch_to_use} for issue {issue.number}'
+                    f"Checking out to PR branch {branch_to_use} for issue {issue.number}"
                 )
 
                 if not branch_to_use:
-                    raise ValueError('Branch name cannot be None')
+                    raise ValueError("Branch name cannot be None")
 
                 # Fetch the branch first to ensure it exists locally
-                fetch_cmd = ['git', 'fetch', 'origin', branch_to_use]
+                fetch_cmd = ["git", "fetch", "origin", branch_to_use]
                 subprocess.check_output(
                     fetch_cmd,
                     cwd=repo_dir,
                 )
 
                 # Checkout the branch
-                checkout_cmd = ['git', 'checkout', branch_to_use]
+                checkout_cmd = ["git", "checkout", branch_to_use]
                 subprocess.check_output(
                     checkout_cmd,
                     cwd=repo_dir,
                 )
 
                 base_commit = (
-                    subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo_dir)
-                    .decode('utf-8')
+                    subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo_dir)
+                    .decode("utf-8")
                     .strip()
                 )
 
             logger.info(
-                f'Issue Resolve - Using base commit {base_commit} for issue {issue.number}\nOutput successfully written to {output_file}'
+                f"Issue Resolve - Using base commit {base_commit} for issue {issue.number}\nOutput successfully written to {output_file}"
             )
 
             output = await self.process_issue(
@@ -610,7 +692,7 @@ class PRArenaIssueResolver(IssueResolver):
             customOutput = CustomResolverOutput(**output.model_dump())
 
         finally:
-            logger.info('Finished.')
+            logger.info("Finished.")
 
             end_time = time.time()
             duration = end_time - start_time
@@ -634,16 +716,12 @@ class PRArenaIssueResolver(IssueResolver):
                     comment_success=None,
                     result_explanation="Error occurred during processing",
                     error="Failed to complete processing",
-                    duration=duration
+                    duration=duration,
                 )
                 return error_output
 
-
     async def get_new_commit_hash(
-        self,
-        output_dir,
-        resolver_output: CustomResolverOutput,
-        pr_type: str
+        self, output_dir, resolver_output: CustomResolverOutput, pr_type: str
     ) -> None:
         # 1) initialize_repo
         patched_repo_dir = initialize_repo(
@@ -663,12 +741,21 @@ class PRArenaIssueResolver(IssueResolver):
             # 3) make_commit [NEW!] with Summary
             # logger.info(f"[DEBUG] Resolver Output: {resolver_output} to {output_dir}")
             # make_commit(patched_repo_dir, resolver_output.issue, resolver_output.issue_type)
-            make_commit_with_summary(patched_repo_dir, resolver_output.issue, resolver_output.issue_type, resolver_output, branch_name, output_dir)
+            make_commit_with_summary(
+                patched_repo_dir,
+                resolver_output.issue,
+                resolver_output.issue_type,
+                resolver_output,
+                branch_name,
+                output_dir,
+            )
 
             # 4) branch checkout and push
-            branch_name, default_branch, base_url, headers = self.prepare_branch_and_push(
-                patch_dir=patched_repo_dir,
-                pr_type=pr_type,
+            branch_name, default_branch, base_url, headers = (
+                self.prepare_branch_and_push(
+                    patch_dir=patched_repo_dir,
+                    pr_type=pr_type,
+                )
             )
 
         resolver_output.branch_name = branch_name
@@ -678,7 +765,9 @@ class PRArenaIssueResolver(IssueResolver):
 
         # 5) Retrieve commit hash
         rev_parse_cmd = f'git -C "{patched_repo_dir}" rev-parse HEAD'
-        result = subprocess.run(rev_parse_cmd, shell=True, capture_output=True, text=True)
+        result = subprocess.run(
+            rev_parse_cmd, shell=True, capture_output=True, text=True
+        )
         new_hash = result.stdout.strip()
 
         # 6) Assign it back to the resolver_output
@@ -687,21 +776,23 @@ class PRArenaIssueResolver(IssueResolver):
 
         return
 
-    async def _resolve_with_model(self, model_index: int, output_dir: str) -> CustomResolverOutput:
+    async def _resolve_with_model(
+        self, model_index: int, output_dir: str
+    ) -> CustomResolverOutput:
         """Resolve issue with a specific model configuration.
-        
+
         This method creates a completely independent resolver context for parallel execution,
         ensuring no shared state between concurrent model runs.
-        
+
         Args:
             model_index: Index of the model configuration to use (0 or 1)
             output_dir: Output directory for this model's results
-            
+
         Returns:
             CustomResolverOutput: The resolved output for this model
         """
         llm_config = self.llm_configs[model_index]
-        
+
         # Create a completely independent issue handler factory for this model
         # This ensures thread safety and no shared state between parallel executions
         factory = IssueHandlerFactory(
@@ -710,50 +801,57 @@ class PRArenaIssueResolver(IssueResolver):
             token=self.token,
             username=self.username,
             platform=self.platform,
-            base_domain='github.com',
+            base_domain="github.com",
             issue_type=self.issue_type,
             llm_config=llm_config,
         )
-        
+
         # Create independent issue handler for this execution
         issue_handler = factory.create()
-        
+
         # Store current instance state to avoid conflicts
-        current_llm_config = self.llm_config if hasattr(self, 'llm_config') else None
-        current_issue_handler = self.issue_handler if hasattr(self, 'issue_handler') else None
-        current_output_dir = self.output_dir if hasattr(self, 'output_dir') else None
-        current_error_tracker_issue_info = (self.error_tracker.issue_title, self.error_tracker.issue_body)
-        
+        current_llm_config = self.llm_config if hasattr(self, "llm_config") else None
+        current_issue_handler = (
+            self.issue_handler if hasattr(self, "issue_handler") else None
+        )
+        current_output_dir = self.output_dir if hasattr(self, "output_dir") else None
+        current_error_tracker_issue_info = (
+            self.error_tracker.issue_title,
+            self.error_tracker.issue_body,
+        )
+
         # Create a temporary backup of instance state for safe parallel execution
         backup_state = {
-            'llm_config': current_llm_config,
-            'issue_handler': current_issue_handler, 
-            'output_dir': current_output_dir
+            "llm_config": current_llm_config,
+            "issue_handler": current_issue_handler,
+            "output_dir": current_output_dir,
         }
-        
+
         try:
             # Temporarily set instance variables for this model's execution
             # This allows resolve_issue() to access the correct configuration
             self.llm_config = llm_config
             self.issue_handler = issue_handler
             self.output_dir = output_dir
-            
+
             # Resolve the issue with this specific model configuration
             # This is the main time-consuming operation that benefits from parallelization
             resolver_output = await self.resolve_issue()
-            
+
             # Update the output with the correct model name for identification
             resolver_output_dict = resolver_output.model_dump()
-            resolver_output_dict['model'] = llm_config.model.split("/")[-1]
+            resolver_output_dict["model"] = llm_config.model.split("/")[-1]
             resolved_output = CustomResolverOutput(**resolver_output_dict)
-            
+
             return resolved_output
-            
+
         except Exception as e:
             # Ensure proper exception handling for parallel execution
-            logger.error(f"Error in _resolve_with_model for model {model_index}: {str(e)}")
+            logger.error(
+                f"Error in _resolve_with_model for model {model_index}: {str(e)}"
+            )
             raise
-            
+
         finally:
             # Restore the original instance state to avoid affecting other operations
             # This is critical for maintaining consistency in parallel execution
@@ -762,7 +860,7 @@ class PRArenaIssueResolver(IssueResolver):
                     setattr(self, key, value)
                 elif hasattr(self, key):
                     delattr(self, key)
-            
+
             # Restore error tracker issue info if it was changed
             if current_error_tracker_issue_info != (None, None):
                 self.error_tracker.set_issue_info(*current_error_tracker_issue_info)
@@ -799,7 +897,10 @@ class PRArenaIssueResolver(IssueResolver):
         attempt = 1
 
         # Ensure the branch doesn't already exist on the remote
-        while httpx.get(f'{base_url}/branches/{branch_name}', headers=headers).status_code == 200:
+        while (
+            httpx.get(f"{base_url}/branches/{branch_name}", headers=headers).status_code
+            == 200
+        ):
             attempt += 1
             branch_name = f"{base_branch_name}-try{attempt}"
 
@@ -817,7 +918,9 @@ class PRArenaIssueResolver(IssueResolver):
         )
         if result.returncode != 0:
             print(f"Error creating new branch: {result.stderr}")
-            raise RuntimeError(f"Failed to create a new branch {branch_name} in {patch_dir}.")
+            raise RuntimeError(
+                f"Failed to create a new branch {branch_name} in {patch_dir}."
+            )
 
         # Determine the repository to push to
         push_owner = self.owner
@@ -826,136 +929,139 @@ class PRArenaIssueResolver(IssueResolver):
         # Construct push command
         username_and_token = (
             f"{self.username}:{self.token}"
-            if self.username else
-            f"x-auth-token:{self.token}"
+            if self.username
+            else f"x-auth-token:{self.token}"
         )
         push_command = (
             f"git -C {shlex.quote(patch_dir)} push "
             f"https://{username_and_token}@github.com/"
             f"{push_owner}/{push_repo}.git {shlex.quote(branch_name)}"
         )
-        result = subprocess.run(push_command, shell=True, capture_output=True, text=True)
+        result = subprocess.run(
+            push_command, shell=True, capture_output=True, text=True
+        )
         if result.returncode != 0:
             print(f"Error pushing changes\n{push_command}\n{result.stderr}")
             raise RuntimeError("Failed to push changes to the remote repository")
 
         return branch_name, default_branch, base_url, headers
 
+
 def main() -> None:
     import argparse
 
     def int_or_none(value: str) -> int | None:
-        if value.lower() == 'none':
+        if value.lower() == "none":
             return None
         else:
             return int(value)
 
     parser = argparse.ArgumentParser(description="Resolve issues from Github.")
     parser.add_argument(
-        '--selected-repo',
+        "--selected-repo",
         type=str,
         required=True,
-        help='repository to resolve issues in form of `owner/repo`.',
+        help="repository to resolve issues in form of `owner/repo`.",
     )
     parser.add_argument(
-        '--token',
+        "--token",
         type=str,
         default=None,
-        help='token to access the repository.',
+        help="token to access the repository.",
     )
     parser.add_argument(
-        '--username',
+        "--username",
         type=str,
         default=None,
-        help='username to access the repository.',
+        help="username to access the repository.",
     )
     parser.add_argument(
-        '--base-container-image',
+        "--base-container-image",
         type=str,
         default=None,
-        help='base container image to use.',
+        help="base container image to use.",
     )
     parser.add_argument(
-        '--runtime-container-image',
+        "--runtime-container-image",
         type=str,
         default=None,
-        help='Container image to use.',
+        help="Container image to use.",
     )
     parser.add_argument(
-        '--max-iterations',
+        "--max-iterations",
         type=int,
         default=50,
-        help='Maximum number of iterations to run.',
+        help="Maximum number of iterations to run.",
     )
     parser.add_argument(
-        '--issue-number',
+        "--issue-number",
         type=int,
         required=True,
-        help='Issue number to resolve.',
+        help="Issue number to resolve.",
     )
     parser.add_argument(
-        '--comment-id',
+        "--comment-id",
         type=int_or_none,
         required=False,
         default=None,
-        help='Resolve a specific comment',
+        help="Resolve a specific comment",
     )
     parser.add_argument(
-        '--output-dir',
+        "--output-dir",
         type=str,
-        default='output',
-        help='Output directory to write the results.',
+        default="output",
+        help="Output directory to write the results.",
     )
     parser.add_argument(
-        '--llm-model',
+        "--llm-model",
         type=str,
-        default='Mock GPT',
-        help='Mock model name to adapt with the existing code.',
+        default="Mock GPT",
+        help="Mock model name to adapt with the existing code.",
     )
     parser.add_argument(
-        '--llm-models',
-        type=str,
-        default=None,
-        help='LLM models to use.',
-    )
-    parser.add_argument(
-        '--llm-api-key',
+        "--llm-models",
         type=str,
         default=None,
-        help='LLM API key to use.',
+        help="LLM models to use.",
     )
     parser.add_argument(
-        '--llm-base-url',
+        "--llm-api-key",
         type=str,
         default=None,
-        help='LLM base URL to use.',
+        help="LLM API key to use.",
     )
     parser.add_argument(
-        '--prompt-file',
+        "--llm-base-url",
         type=str,
         default=None,
-        help='Path to the prompt template file in Jinja format.',
+        help="LLM base URL to use.",
     )
     parser.add_argument(
-        '--repo-instruction-file',
+        "--prompt-file",
         type=str,
         default=None,
-        help='Path to the repository instruction file in text format.',
+        help="Path to the prompt template file in Jinja format.",
     )
     parser.add_argument(
-        '--issue-type',
+        "--repo-instruction-file",
         type=str,
-        default='issue',
-        choices=['issue', 'pr'],
-        help='Type of issue to resolve, either open issue or pr comments.',
+        default=None,
+        help="Path to the repository instruction file in text format.",
     )
     parser.add_argument(
-        '--is-experimental',
-        type=lambda x: x.lower() == 'true',
-        help='Whether to run in experimental mode.',
+        "--issue-type",
+        type=str,
+        default="issue",
+        choices=["issue", "pr"],
+        help="Type of issue to resolve, either open issue or pr comments.",
     )
     parser.add_argument(
-        '--base-domain',
+        "--is-experimental",
+        type=lambda x: x.lower() == "true",
+        help="Whether to run in experimental mode.",
+    )
+    parser.add_argument(
+        "--base-domain",
         type=str,
         default=None,
         help='Base domain for the git server (defaults to "github.com" for GitHub and "gitlab.com" for GitLab)',
@@ -964,9 +1070,8 @@ def main() -> None:
     my_args = parser.parse_args()
     issue_resolver = PRArenaIssueResolver(my_args)
 
-    asyncio.run(
-        issue_resolver.resolve_issues_with_random_models()
-    )
+    asyncio.run(issue_resolver.resolve_issues_with_random_models())
+
 
 if __name__ == "__main__":
     main()
