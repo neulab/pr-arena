@@ -36,7 +36,9 @@ class ErrorTracker:
         error_message: str,
         uuid_ref: Optional[str] = None,
         models: Optional[Dict[str, str]] = None,
-        additional_context: Optional[Dict[str, Any]] = None
+        additional_context: Optional[Dict[str, Any]] = None,
+        git_patch_empty: Optional[bool] = None,
+        model_error_details: Optional[str] = None
     ) -> str:
         """
         Log an error to the error_collection in Firebase.
@@ -47,6 +49,8 @@ class ErrorTracker:
             uuid_ref: UUID reference from issue_collection (if available)
             models: Dict of models involved (if available)
             additional_context: Additional context information
+            git_patch_empty: Whether the git patch is empty or not
+            model_error_details: Details about which model caused the error
 
         Returns:
             The UUID used for the error record
@@ -76,7 +80,9 @@ class ErrorTracker:
             "additional_context": additional_context or {},
             "installationToken": self.token,
             "issue_title": self.issue_title,
-            "issue_body": self.issue_body
+            "issue_body": self.issue_body,
+            "git_patch_empty": git_patch_empty,
+            "model_error_details": model_error_details
         }
 
         # If we have an existing UUID, try to link it to issue_collection
@@ -95,7 +101,9 @@ class ErrorTracker:
         error_message: str,
         uuid_ref: Optional[str] = None,
         models: Optional[Dict[str, str]] = None,
-        additional_context: Optional[Dict[str, Any]] = None
+        additional_context: Optional[Dict[str, Any]] = None,
+        git_patch_empty: Optional[bool] = None,
+        model_error_details: Optional[str] = None
     ) -> str:
         """
         Synchronous version of log_error for use in scripts and workflows.
@@ -107,7 +115,8 @@ class ErrorTracker:
         try:
             # Try to run in a new event loop
             return asyncio.run(self.log_error(
-                error_type, error_message, uuid_ref, models, additional_context
+                error_type, error_message, uuid_ref, models, additional_context,
+                git_patch_empty, model_error_details
             ))
         except RuntimeError as e:
             if "asyncio.run() cannot be called from a running event loop" in str(e):
@@ -132,7 +141,9 @@ def log_workflow_error(
     error_type: str,
     error_message: str,
     uuid_ref: Optional[str] = None,
-    models: Optional[str] = None
+    models: Optional[str] = None,
+    git_patch_empty: Optional[bool] = None,
+    model_error_details: Optional[str] = None
 ) -> str:
     """
     Standalone function to log errors from GitHub workflows.
@@ -146,6 +157,8 @@ def log_workflow_error(
         error_message: Error message
         uuid_ref: UUID from issue_collection if available
         models: Comma-separated string of models (from workflow)
+        git_patch_empty: Whether the git patch is empty or not
+        model_error_details: Details about which model caused the error
     """
     tracker = ErrorTracker(owner, repo, issue_number, token)
 
@@ -160,7 +173,9 @@ def log_workflow_error(
         error_type=error_type,
         error_message=error_message,
         uuid_ref=uuid_ref,
-        models=models_dict
+        models=models_dict,
+        git_patch_empty=git_patch_empty,
+        model_error_details=model_error_details
     )
 
 
@@ -176,6 +191,8 @@ if __name__ == "__main__":
     parser.add_argument("--error-message", required=True, help="Error message")
     parser.add_argument("--uuid", help="UUID from issue_collection")
     parser.add_argument("--models", help="Comma-separated list of models")
+    parser.add_argument("--git-patch-empty", action="store_true", help="Flag if git patch is empty")
+    parser.add_argument("--model-error-details", help="Details about which model caused the error")
 
     args = parser.parse_args()
 
@@ -187,7 +204,9 @@ if __name__ == "__main__":
         error_type=args.error_type,
         error_message=args.error_message,
         uuid_ref=args.uuid,
-        models=args.models
+        models=args.models,
+        git_patch_empty=args.git_patch_empty,
+        model_error_details=args.model_error_details
     )
 
     print(f"Error logged with UUID: {error_uuid}")

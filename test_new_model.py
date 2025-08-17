@@ -10,7 +10,7 @@ Usage:
     
 Example:
     python test_new_model.py \
-        --model-name "claude-3-5-sonnet-20241022" \
+        --model-name "litellm_proxy/neulab/gpt-4.1-2025-04-14" \
         --api-key "sk-ant-..." \
         --github-token "ghp_..." \
         --repo "JiseungHong/web-hosting-gravisu" \
