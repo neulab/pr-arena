@@ -44,6 +44,11 @@ AGENT_CLASS = 'CodeActAgent'
 
 class PRArenaIssueResolver(IssueResolver):
     """PR Arena Issue Resolver that processes issues with multiple LLM models."""
+    
+    # Type annotations for class attributes
+    llm_config: LLMConfig
+    issue_handler: Any  # This will be set dynamically in _resolve_with_model
+    output_dir: str
 
     def __init__(self, args: Namespace) -> None:
         # super().__init__(args) # Most shared arguments are processed by parent class
@@ -212,19 +217,26 @@ class PRArenaIssueResolver(IssueResolver):
         try:
             # Run both agents in parallel using asyncio.gather
             # return_exceptions=True ensures we can handle individual failures
-            resolver_output_1, resolver_output_2 = await asyncio.gather(
+            results = await asyncio.gather(
                 self._resolve_with_model(model_index=0, output_dir='output1'),
                 self._resolve_with_model(model_index=1, output_dir='output2'),
                 return_exceptions=True
             )
 
             # Handle exceptions from either task
+            resolver_output_1 = results[0]
+            resolver_output_2 = results[1]
+            
             if isinstance(resolver_output_1, Exception):
                 raise resolver_output_1
             if isinstance(resolver_output_2, Exception):
                 raise resolver_output_2
 
             # Send both outputs to Firebase after both complete
+            # Type assertions to help mypy understand these are CustomResolverOutput
+            assert isinstance(resolver_output_1, CustomResolverOutput)
+            assert isinstance(resolver_output_2, CustomResolverOutput)
+            
             await self.send_to_firebase(
                 resolved_output_1=resolver_output_1,
                 resolved_output_2=resolver_output_2,
