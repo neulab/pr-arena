@@ -24,3 +24,9 @@ class CustomResolverOutput(ResolverOutput):
     base_url: str | None = Field(default=None)
     headers: dict | None = Field(default=None)
     duration: float | None = Field(default=None)
+    
+    # Cost tracking fields
+    accumulated_cost: float | None = Field(default=None)
+    token_usage: dict[str, Any] | None = Field(default=None)
+    cost_per_input_token: float | None = Field(default=None)
+    cost_per_output_token: float | None = Field(default=None)

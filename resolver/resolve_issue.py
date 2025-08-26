@@ -38,6 +38,26 @@ from openhands.resolver.issue_resolver import IssueResolver  # noqa: E402
 from openhands.resolver.resolver_output import ResolverOutput  # noqa: E402
 from openhands.runtime import Runtime  # noqa: E402
 
+# Monkey patch OpenHands LLM to handle GPT-5 models
+def patch_openhands_for_gpt5():
+    """Patch OpenHands to exclude GPT-5 models from receiving stop tokens."""
+    try:
+        from openhands.llm import llm as openhands_llm_module
+        if hasattr(openhands_llm_module, 'MODELS_WITHOUT_STOP_WORDS'):
+            # Add GPT-5 models to the exclusion list (both base and full proxy names)
+            gpt5_models = ['gpt-5', 'litellm_proxy/neulab/gpt-5']
+            current_models = list(openhands_llm_module.MODELS_WITHOUT_STOP_WORDS)
+            for gpt5_model in gpt5_models:
+                if gpt5_model not in current_models:
+                    current_models.append(gpt5_model)
+            openhands_llm_module.MODELS_WITHOUT_STOP_WORDS = current_models
+            logger.info(f"Updated MODELS_WITHOUT_STOP_WORDS to include GPT-5: {openhands_llm_module.MODELS_WITHOUT_STOP_WORDS}")
+    except Exception as e:
+        logger.warning(f"Failed to patch OpenHands for GPT-5: {e}")
+
+# Apply the patch
+patch_openhands_for_gpt5()
+
 # Don't make this configurable for now, unless we have other competitive agents
 AGENT_CLASS = "CodeActAgent"
 
@@ -98,6 +118,11 @@ class PRArenaIssueResolver(IssueResolver):
 
         selected_models = random.sample(model_names, 2)
         # selected_models = model_names
+        
+        # Save selected models to file for timeout handling
+        with open('/tmp/selected_models.txt', 'w') as f:
+            f.write(','.join(selected_models))
+        
         self.llm_configs = []
 
         for model in selected_models:
@@ -107,20 +132,46 @@ class PRArenaIssueResolver(IssueResolver):
                 or "o3-mini" in model
                 or "o4-mini" in model
                 or "gemini" in model.lower()
+                or "gpt-5" in model.lower()
             )
 
-            # Create LLMConfig instance
-            llm_config = LLMConfig(
-                model=model,
-                api_key=Secrets.get_api_key(),
-                base_url=base_url,
-                num_retries=llm_num_retries,
-                retry_min_wait=llm_retry_min_wait,
-                retry_max_wait=llm_retry_max_wait,
-                retry_multiplier=llm_retry_multiplier,
-                timeout=llm_timeout,
-                drop_params=needs_drop_params,
-            )
+            if "gpt-5" in model.lower():
+                reasoning_effort = "high"  # Set high reasoning effort for GPT-5
+                temperature = 1.0
+                print(f"gpt-5 log / {model}")
+
+                # Create a dictionary with all LLMConfig parameters except 'stop' and 'top_p'
+                config_params = {
+                    "model": model,
+                    "api_key": Secrets.get_api_key(),
+                    "base_url": base_url,
+                    "num_retries": llm_num_retries,
+                    "retry_min_wait": llm_retry_min_wait,
+                    "retry_max_wait": llm_retry_max_wait,
+                    "retry_multiplier": llm_retry_multiplier,
+                    "timeout": llm_timeout,
+                    "drop_params": needs_drop_params,
+                    "reasoning_effort": reasoning_effort,
+                    "temperature": temperature,
+                }
+                
+                llm_config = LLMConfig(**config_params)
+                
+                # Explicitly set stop to None for GPT-5 models to prevent it from being passed
+                if hasattr(llm_config, "stop"):
+                    llm_config.stop = None
+            else:
+                llm_config = LLMConfig(
+                    model=model,
+                    api_key=Secrets.get_api_key(),
+                    base_url=base_url,
+                    num_retries=llm_num_retries,
+                    retry_min_wait=llm_retry_min_wait,
+                    retry_max_wait=llm_retry_max_wait,
+                    retry_multiplier=llm_retry_multiplier,
+                    timeout=llm_timeout,
+                    drop_params=needs_drop_params,
+                )
 
             if "gemini" in model.lower():
                 # Gemini models have specific limitations on tool formats
@@ -462,6 +513,12 @@ class PRArenaIssueResolver(IssueResolver):
                     "duration": resolved_output_1.duration
                     if resolved_output_1.duration
                     else None,
+                    "cost": {
+                        "accumulated_cost": resolved_output_1.accumulated_cost,
+                        "token_usage": resolved_output_1.token_usage,
+                        "cost_per_input_token": resolved_output_1.cost_per_input_token,
+                        "cost_per_output_token": resolved_output_1.cost_per_output_token,
+                    },
                 },
                 "modelB": {
                     "modelId": model2_id,
@@ -473,6 +530,12 @@ class PRArenaIssueResolver(IssueResolver):
                     "duration": resolved_output_2.duration
                     if resolved_output_2.duration
                     else None,
+                    "cost": {
+                        "accumulated_cost": resolved_output_2.accumulated_cost,
+                        "token_usage": resolved_output_2.token_usage,
+                        "cost_per_input_token": resolved_output_2.cost_per_input_token,
+                        "cost_per_output_token": resolved_output_2.cost_per_output_token,
+                    },
                 },
             },
             "winner": None,  # No winner determined yet
@@ -690,6 +753,9 @@ class PRArenaIssueResolver(IssueResolver):
             )
 
             customOutput = CustomResolverOutput(**output.model_dump())
+            
+            # Extract cost information from metrics if available
+            self._calculate_and_set_costs(customOutput)
 
         finally:
             logger.info("Finished.")
@@ -700,6 +766,9 @@ class PRArenaIssueResolver(IssueResolver):
 
             if customOutput is not None:  # Check if customOutput was created
                 customOutput.duration = duration
+                # Log cost information
+                if customOutput.accumulated_cost is not None:
+                    logger.info(f"Total cost for issue resolution: ${customOutput.accumulated_cost:.4f}")
                 # logger.info(f"Output: {customOutput}")
                 return customOutput
             else:
@@ -842,6 +911,9 @@ class PRArenaIssueResolver(IssueResolver):
             resolver_output_dict = resolver_output.model_dump()
             resolver_output_dict["model"] = llm_config.model.split("/")[-1]
             resolved_output = CustomResolverOutput(**resolver_output_dict)
+            
+            # Calculate costs for this specific model's execution
+            self._calculate_and_set_costs_for_model(resolved_output, llm_config)
 
             return resolved_output
 
@@ -945,6 +1017,91 @@ class PRArenaIssueResolver(IssueResolver):
             raise RuntimeError("Failed to push changes to the remote repository")
 
         return branch_name, default_branch, base_url, headers
+
+    def _calculate_and_set_costs(self, resolver_output: CustomResolverOutput) -> None:
+        """Calculate and set cost information from OpenHands metrics."""
+        try:
+            # Extract metrics from the resolver output
+            if resolver_output.metrics and hasattr(resolver_output.metrics, 'accumulated_cost'):
+                resolver_output.accumulated_cost = resolver_output.metrics.accumulated_cost
+            elif resolver_output.metrics and isinstance(resolver_output.metrics, dict):
+                resolver_output.accumulated_cost = resolver_output.metrics.get('accumulated_cost', 0.0)
+            
+            # Extract token usage information
+            if resolver_output.metrics and hasattr(resolver_output.metrics, 'accumulated_token_usage'):
+                resolver_output.token_usage = resolver_output.metrics.accumulated_token_usage
+            elif resolver_output.metrics and isinstance(resolver_output.metrics, dict):
+                resolver_output.token_usage = resolver_output.metrics.get('accumulated_token_usage', {})
+            
+            # Get cost per token from LLM config if available
+            if hasattr(self, 'llm_config') and self.llm_config:
+                resolver_output.cost_per_input_token = self.llm_config.input_cost_per_token
+                resolver_output.cost_per_output_token = self.llm_config.output_cost_per_token
+                
+                # If accumulated cost isn't available but we have token counts and rates, calculate it
+                if not resolver_output.accumulated_cost and resolver_output.token_usage:
+                    input_tokens = 0
+                    output_tokens = 0
+                    
+                    if isinstance(resolver_output.token_usage, dict):
+                        # Sum up tokens from different components
+                        for component_usage in resolver_output.token_usage.values():
+                            if isinstance(component_usage, dict):
+                                input_tokens += component_usage.get('prompt_tokens', 0)
+                                output_tokens += component_usage.get('completion_tokens', 0)
+                    
+                    # Calculate cost
+                    input_cost = input_tokens * (self.llm_config.input_cost_per_token or 0)
+                    output_cost = output_tokens * (self.llm_config.output_cost_per_token or 0)
+                    resolver_output.accumulated_cost = input_cost + output_cost
+                    
+        except Exception as e:
+            logger.warning(f"Failed to calculate costs for resolver output: {e}")
+            resolver_output.accumulated_cost = 0.0
+            resolver_output.token_usage = {}
+
+    def _calculate_and_set_costs_for_model(self, resolver_output: CustomResolverOutput, llm_config: "LLMConfig") -> None:
+        """Calculate and set cost information for a specific model configuration."""
+        try:
+            # Extract metrics from the resolver output
+            if resolver_output.metrics and hasattr(resolver_output.metrics, 'accumulated_cost'):
+                resolver_output.accumulated_cost = resolver_output.metrics.accumulated_cost
+            elif resolver_output.metrics and isinstance(resolver_output.metrics, dict):
+                resolver_output.accumulated_cost = resolver_output.metrics.get('accumulated_cost', 0.0)
+            
+            # Extract token usage information
+            if resolver_output.metrics and hasattr(resolver_output.metrics, 'accumulated_token_usage'):
+                resolver_output.token_usage = resolver_output.metrics.accumulated_token_usage
+            elif resolver_output.metrics and isinstance(resolver_output.metrics, dict):
+                resolver_output.token_usage = resolver_output.metrics.get('accumulated_token_usage', {})
+            
+            # Set cost per token from the specific LLM config
+            resolver_output.cost_per_input_token = llm_config.input_cost_per_token
+            resolver_output.cost_per_output_token = llm_config.output_cost_per_token
+            
+            # If accumulated cost isn't available but we have token counts and rates, calculate it
+            if not resolver_output.accumulated_cost and resolver_output.token_usage:
+                input_tokens = 0
+                output_tokens = 0
+                
+                if isinstance(resolver_output.token_usage, dict):
+                    # Sum up tokens from different components
+                    for component_usage in resolver_output.token_usage.values():
+                        if isinstance(component_usage, dict):
+                            input_tokens += component_usage.get('prompt_tokens', 0)
+                            output_tokens += component_usage.get('completion_tokens', 0)
+                
+                # Calculate cost
+                input_cost = input_tokens * (llm_config.input_cost_per_token or 0)
+                output_cost = output_tokens * (llm_config.output_cost_per_token or 0)
+                resolver_output.accumulated_cost = input_cost + output_cost
+                
+            logger.info(f"Cost calculation for {llm_config.model}: ${resolver_output.accumulated_cost:.4f}")
+                
+        except Exception as e:
+            logger.warning(f"Failed to calculate costs for model {llm_config.model}: {e}")
+            resolver_output.accumulated_cost = 0.0
+            resolver_output.token_usage = {}
 
 
 def main() -> None:
