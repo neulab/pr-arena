@@ -6,8 +6,6 @@
 
 This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
 
-Follow the instruction below to setup the Arena setting for the OpenHands resolver.
-
 ![Demo](assets/img/demo.gif)
 
 ### Maintainer
@@ -15,9 +13,9 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 [![GitHub](https://img.shields.io/badge/JiseungHong-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/JiseungHong)
 [![Website](https://img.shields.io/badge/wlqmfl.com-4285F4?style=flat-square&logo=google-chrome&logoColor=white)](https://wlqmfl.com)
 
-## How to Get Started with the OpenHands PR Arena GitHub App
+Follow the instruction below to setup the Arena setting for the OpenHands resolver.
 
-**⭐️ You can use PR Arena without an API Key for a limited time!**
+## How to Get Started with the OpenHands PR Arena GitHub App
 
 ### How to use
 
@@ -29,11 +27,13 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 2. Navigate to one of the selected repositories
 3. Label an issue with `pr-arena` to trigger the automated fix:
     - Open or create an issue, click `Labels` in the sidebar, and select `pr-arena`
-4. Wait for the agent to resolve the issue and open the Arena (this may take 20–40 minutes)
+4. Wait for the agent to resolve the issue and open the Arena (this may take 10-20 minutes)
 5. Click the link in the comment to enter the Arena and choose your preferred model
 6. The selected fix will be automatically submitted as a Pull Request
 
-**⭐️ Progress is updated via comments on the issue—keep an eye on them!**
+### Arena Lifecycle
+- Progress is continuously updated via **comments** on the issue — keep an eye on them!  
+- The Arena will automatically **close 60 minutes after the label is applied**.
 
 ## Privacy Notification
 1. The only code we collect is the `git_diff` generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
@@ -49,11 +49,9 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 **Q. How can I track the progress?**
 
 A. The agent will automatically **comment on the issue** at each stage of the process:
-  - `PR-Arena workflow triggered successfully! 🎉 ...`
-    - Step 0. Tips and instructions to guide you through the PR-Arena workflow.
-  - `OpenHands started fixing the issue! You can monitor the progress [here]`
+  - `👐 OpenHands PR-Arena has started the task: [click here for details]. For more info about how to use OpenHands PR-Arena, [click this link].`
     - Step 1. OpenHands begins resolving the issue. Please wait 10 ~ 20 minutes for the next comment.
-  - `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link]`
+  - `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link].`
     - Step 2. The Arena is open. Click the link to review both fixes and choose your preferred one.
   - `PR has been created based on the fix you've selected. Please review the changes.`
     - Step 3. A pull request has been created. You can now review and merge it.
@@ -68,7 +66,7 @@ There are three types of errors:
   - Workflow side error:
   `❌ PR-Arena encountered an error while ___. Please remove the 'pr-arena' label and add it back to retry.`
   - Timeout error:
-  `⏱️ PR-Arena workflow has been cancelled due to exceeding the 30-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
+  `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
 
 **Q. How long does the process take?**
 
@@ -78,7 +76,7 @@ A. The time depends on the complexity of the issue. Some reasoning models may ta
 
 A. The workflow makes API calls to our backend infrastructure where OpenHands agents run remotely. Your GitHub Actions runner only handles lightweight tasks like triggering the workflow and creating pull requests. The actual AI processing and code generation happens on our servers, so it consumes minimal GitHub Actions minutes (typically just a few minutes per issue).
 
-## Security & Permission (🔒)
+## Security & Permission
 This GitHub App requires the following permissions:
 - **Read & Write access** to Issues and Pull Requests — to analyze issues and generate PRs
 - **Workflow execution** — to trigger automated fixes via GitHub Actions
