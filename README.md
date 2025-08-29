@@ -34,6 +34,7 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 ### Arena Lifecycle
 - Progress is continuously updated via **comments** on the issue — keep an eye on them!  
 - The Arena will automatically **close 60 minutes after the label is applied**.
+- For guidance on viewing and testing Arena results after closure, see [ARENA_GUIDE.md](ARENA_GUIDE.md).
 
 ## Privacy Notification
 1. The only code we collect is the `git_diff` generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
