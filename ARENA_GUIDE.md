@@ -15,13 +15,11 @@ Even if the Arena has closed or expired, you can still view the proposed fixes a
 
 2. **Click the Arena Link**: As shown in the image below, you can click on the provided link even after the Arena has expired:
 
-   ![Arena Access](assets/img/expired.png)
+   ![Arena Access](assets/img/expired1.png)
 
-3. **Navigate Through Commits**: Once in the Arena, you can:
-   - View side-by-side comparisons of both model solutions
-   - Navigate through each commit and see the changes made
-   - Review the code differences between the two approaches
-   - Vote for the model that provided the better solution
+3. **Navigate Through Commits**: You can navigate through each commit and vote only if you haven't voted yet.
+
+   ![Vote Model](assets/img/expired1.png)
 
 ## Testing Commits Locally
 
@@ -31,6 +29,7 @@ Want to test the proposed solutions on your local machine? Here's how to pull an
 
 The Arena creates two commits for each model's solution. You can find the commit hashes in the issue comments or in the Arena interface.
 
+Alternatively, you can:
 ```bash
 # Fetch all branches and commits
 git fetch origin
@@ -41,19 +40,41 @@ git log --oneline -10
 
 ### Step 2: Test Each Solution
 
-For each commit you want to test:
-
+Clone the repository (if you haven't already):
 ```bash
-# Create a new branch for testing (replace COMMIT_HASH with actual hash)
-git checkout -b test-model-1 COMMIT_HASH_MODEL_1
+git clone https://github.com/your-username/your-repo.git
+cd your-repo
+```
 
-# Run your tests or application
+Fetch all updates just in case (this is often done automatically during clone):
+```bash
+git fetch origin
+```
+
+Checkout the specific commit by its hash:
+```bash
+git checkout COMMIT_HASH_MODEL_1
+```
+This moves your working directory to the state of that commit. You'll be in a detached HEAD state—meaning you're not on a branch.
+
+Optional: Create a new branch if you'd like to make changes based on this commit:
+```bash
+git checkout -b test-model-1
+```
+That way, any new commits are tracked properly.
+
+Run your tests or application:
+```bash
 npm install  # or your package manager
 npm test     # run tests
 npm start    # start the application
+```
 
-# Switch to test the other model
-git checkout -b test-model-2 COMMIT_HASH_MODEL_2
+Switch to test the other model:
+```bash
+git checkout COMMIT_HASH_MODEL_2
+# Optional: Create a branch
+git checkout -b test-model-2
 
 # Run the same tests
 npm install
@@ -61,23 +82,7 @@ npm test
 npm start
 ```
 
-### Step 3: Compare Results
-
-1. **Functionality Testing**: 
-   - Does the fix actually resolve the original issue?
-   - Are there any new bugs introduced?
-   - How does the application behave with each solution?
-
-2. **Code Quality**: 
-   - Which solution is more maintainable?
-   - Which follows better coding practices?
-   - Which integrates better with the existing codebase?
-
-3. **Performance**: 
-   - Are there performance differences between the solutions?
-   - Which solution is more efficient?
-
-### Step 4: Clean Up
+### Step 3: Clean Up
 
 After testing, clean up your test branches:
 
@@ -95,9 +100,7 @@ After testing both solutions locally:
 
 1. Return to the Arena link (it works even after expiration)
 2. Review your local testing results
-3. Consider both functionality and code quality
-4. Vote for the model that provided the better overall solution
-5. Your feedback helps improve the models for future issues!
+3. Vote for the model that provided the better overall solution
 
 ## Need Help?
 

@@ -4,7 +4,7 @@
 
 *OpenHands PR Arena* is a platform for evaluating and benchmarking agentic coding assistants through paired pull request (PR) generations. PR Arena enables developers to compare multiple LLMs in real-world issue resolution by presenting side-by-side pull requests and allowing users to select the better fix.
 
-This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
+Follow the instruction below to setup the Arena setting for the OpenHands resolver.
 
 ![Demo](assets/img/demo.gif)
 
@@ -13,13 +13,9 @@ This project is built upon [OpenHands GitHub Backlog Resolver](https://github.co
 [![GitHub](https://img.shields.io/badge/JiseungHong-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/JiseungHong)
 [![Website](https://img.shields.io/badge/wlqmfl.com-4285F4?style=flat-square&logo=google-chrome&logoColor=white)](https://wlqmfl.com)
 
-Follow the instruction below to setup the Arena setting for the OpenHands resolver.
-
 ## How to Get Started with the OpenHands PR Arena GitHub App
 
 ### How to use
-
-**⭐️ Please watch the [guideline video](https://youtu.be/BV2Rj_zlk2g) that explains how to use the OpenHands PR Arena GitHub App!**
 
 1. Install OpenHands PR Arena to your GitHub Repository
     - Go to the [installation page](https://github.com/apps/openhands-pr-arena/installations/new)
@@ -31,14 +27,16 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 5. Click the link in the comment to enter the Arena and choose your preferred model
 6. The selected fix will be automatically submitted as a Pull Request
 
+⭐️ Please watch the [guideline video](https://youtu.be/BV2Rj_zlk2g) that explains how to use the OpenHands PR Arena GitHub App!
+
 ### Arena Lifecycle
-- Progress is continuously updated via **comments** on the issue — keep an eye on them!  
-- The Arena will automatically **close 60 minutes after the label is applied**.
-- For guidance on viewing and testing Arena results after closure, see [ARENA_GUIDE.md](ARENA_GUIDE.md).
+- Progress is continuously updated via **comments** on the issue — keep an eye on them!
+- The Arena will automatically close 60 minutes after the label is applied, **but you can still view fixes and vote**.
+- For guidance on locally testing proposed fixes and viewing Arena results after closure, see [ARENA_GUIDE.md](ARENA_GUIDE.md).
 
 ## Privacy Notification
 1. The only code we collect is the `git_diff` generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
-2. **Important**: Installing this App will automatically add a workflow file named `pr-arena-workflow.yml` to your repository. This file redirects to the actual resolver workflow located at: [https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml](https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml). If you are concerned about repository workflows, we encourage you to review the resolver workflow to understand the operations it performs.
+2. **Important**: Installing this App will automatically add a workflow file named `pr-arena-workflow.yml` to your repository. This file redirects to the actual resolver workflow located [here](https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml). If you are concerned about repository workflows, we encourage you to review the resolver workflow to understand the operations it performs.
 3. Do not modify the injected workflow. Any modifications will prevent it from being triggered.
 4. Please install and use this app **only** on repositories where you consent to having code snippets (i.e., `git_diff`) processed by the LLM provider.
 5. The following metadata is collected for research purpose:
@@ -61,17 +59,9 @@ A. The agent will automatically **comment on the issue** at each stage of the pr
 
 A. If an error occurs, the agent will comment on the issue with an appropriate message. You can retry by removing the `pr-arena` label, waiting 5 seconds, and adding it again.
 
-There are three types of errors:
-  - Agent side error:
-  `❌ PR-Arena has failed due to the agent error. Please remove the 'pr-arena' label and add it back to retry.`
-  - Workflow side error:
-  `❌ PR-Arena encountered an error while ___. Please remove the 'pr-arena' label and add it back to retry.`
-  - Timeout error:
-  `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
-
 **Q. How long does the process take?**
 
-A. The time depends on the complexity of the issue. Some reasoning models may take longer to process. Typically, it should take **less than 30 minutes**, so please be patient!
+A. The time depends on the complexity of the issue. Some reasoning models may take longer to process. Typically, it should take **less than 30 minutes**, so please be patient.
 
 **Q. How does this affect my GitHub Actions build minutes?**
 
@@ -85,11 +75,14 @@ This GitHub App requires the following permissions:
 
 No user secrets or sensitive information are stored in your repository. All sensitive operations are securely handled through our backend infrastructure.
 
-## Support
+## Support and Acknowledgment
 
-This project is an extension of [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver). If you have any issues, please open an issue on this github repo, we're happy to help!
+If you have any issues, please open an issue on this github repo, we're happy to help!
 Alternatively, you can [email us](mailto:jiseungh@andrew.cmu.edu) or join the [OpenHands Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2oikve2hu-UDxHeo8nsE69y6T7yFX_BA) and ask there.
 
+This project is built upon [OpenHands GitHub Backlog Resolver](https://github.com/All-Hands-AI/OpenHands/tree/main/openhands/resolver) and inspired by [Copilot Arena](https://github.com/lmarena/copilot-arena), an open source AI coding assistant that provides paired autocomplete completions from different LLMs.
+
+[![Powered by OpenHands](https://img.shields.io/badge/Powered%20by-OpenHands-blue)](https://github.com/openhands)
 <!-- ---
 
 ## Using the GitHub Actions Workflow
