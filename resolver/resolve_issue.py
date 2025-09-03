@@ -136,12 +136,10 @@ class PRArenaIssueResolver(IssueResolver):
             )
 
             if "gpt-5" in model.lower():
-                temperature = 1.0
-                # Set a reasonable timeout for GPT-5 to prevent hanging
                 gpt5_timeout = 300  # 5 minutes per API call
-                # print(f"GPT-5 detected: {model}, setting timeout to {gpt5_timeout}s")
+                print(f"GPT-5 detected: {model}, applying specialized configuration")
 
-                # Create a dictionary with all LLMConfig parameters for GPT-5
+                # GPT-5 needs very specific configuration - only default temperature (1.0) is supported
                 config_params = {
                     "model": model,
                     "api_key": Secrets.get_api_key(),
@@ -150,20 +148,26 @@ class PRArenaIssueResolver(IssueResolver):
                     "retry_min_wait": llm_retry_min_wait,
                     "retry_max_wait": llm_retry_max_wait,
                     "retry_multiplier": llm_retry_multiplier,
-                    "timeout": gpt5_timeout,  # Use specific timeout for GPT-5
-                    "drop_params": True,  # Force drop_params for GPT-5
-                    "temperature": temperature,
+                    "timeout": gpt5_timeout,
+                    "drop_params": True,  # Critical for GPT-5
+                    # Note: GPT-5 only supports default temperature (1.0)
                 }
                 
                 llm_config = LLMConfig(**config_params)
                 
-                # Explicitly set problematic parameters to None for GPT-5
+                # GPT-5 specific parameter cleanup - remove all custom parameters that aren't supported
+                if hasattr(llm_config, "temperature"):
+                    llm_config.temperature = None  # Use default (1.0)
                 if hasattr(llm_config, "stop"):
                     llm_config.stop = None
                 if hasattr(llm_config, "top_p"):
                     llm_config.top_p = None
                 if hasattr(llm_config, "max_tokens"):
-                    llm_config.max_tokens = 4000  # Set reasonable limit
+                    llm_config.max_tokens = 2000  # Shorter responses for precision
+                if hasattr(llm_config, "frequency_penalty"):
+                    llm_config.frequency_penalty = None
+                if hasattr(llm_config, "presence_penalty"):
+                    llm_config.presence_penalty = None
             else:
                 llm_config = LLMConfig(
                     model=model,
