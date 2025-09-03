@@ -20,7 +20,11 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 1. Install OpenHands PR Arena to your GitHub Repository
     - Go to the [installation page](https://github.com/apps/openhands-pr-arena/installations/new)
     - Under **Repository access**, select the repositories you want to install the app on
-2. Navigate to one of the selected repositories
+
+### Once you've installed the GitHub App ...
+🎉 Let’s start fixing your GitHub issues!
+
+2. Open the repository where the GitHub App was installed (i.e., where you’d like to resolve issues).
 3. Label an issue with `pr-arena` to trigger the automated fix:
     - Open or create an issue, click `Labels` in the sidebar, and select `pr-arena`
 4. Wait for the agent to resolve the issue and open the Arena (this may take 10-20 minutes)
