@@ -136,9 +136,9 @@ class PRArenaIssueResolver(IssueResolver):
             )
 
             if "gpt-5" in model.lower():
-                reasoning_effort = "high"  # Set high reasoning effort for GPT-5
+                # reasoning_effort = "high"  # COMMENTED OUT: Not supported by LiteLLM for OpenAI models
                 temperature = 1.0
-                print(f"gpt-5 log / {model}")
+                # print(f"gpt-5 log / {model}")
 
                 # Create a dictionary with all LLMConfig parameters except 'stop' and 'top_p'
                 config_params = {
@@ -151,7 +151,7 @@ class PRArenaIssueResolver(IssueResolver):
                     "retry_multiplier": llm_retry_multiplier,
                     "timeout": llm_timeout,
                     "drop_params": needs_drop_params,
-                    "reasoning_effort": reasoning_effort,
+                    # "reasoning_effort": reasoning_effort,  # COMMENTED OUT: Not supported by LiteLLM for OpenAI models
                     "temperature": temperature,
                 }
                 
