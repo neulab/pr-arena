@@ -179,7 +179,7 @@ jobs:
               issue_number: ${{ inputs.issue_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. This may be due to a complex task or an agent error. Please remove the 'pr-arena' label and add it back to retry.`
+              body: `⏱️ PR-Arena workflow has been cancelled due to exceeding the 40-minute timeout limit. Please remove the 'pr-arena' label and add it back to retry. Also consider breaking the issue into smaller, more focused sub-issues.`
             });
       
       - name: Wait for user's decision and save it to the GitHub environment

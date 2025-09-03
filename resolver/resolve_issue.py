@@ -51,7 +51,7 @@ def patch_openhands_for_gpt5():
                 if gpt5_model not in current_models:
                     current_models.append(gpt5_model)
             openhands_llm_module.MODELS_WITHOUT_STOP_WORDS = current_models
-            logger.info(f"Updated MODELS_WITHOUT_STOP_WORDS to include GPT-5: {openhands_llm_module.MODELS_WITHOUT_STOP_WORDS}")
+            # logger.info(f"Updated MODELS_WITHOUT_STOP_WORDS to include GPT-5: {openhands_llm_module.MODELS_WITHOUT_STOP_WORDS}")
     except Exception as e:
         logger.warning(f"Failed to patch OpenHands for GPT-5: {e}")
 
@@ -136,11 +136,12 @@ class PRArenaIssueResolver(IssueResolver):
             )
 
             if "gpt-5" in model.lower():
-                # reasoning_effort = "high"  # COMMENTED OUT: Not supported by LiteLLM for OpenAI models
                 temperature = 1.0
-                # print(f"gpt-5 log / {model}")
+                # Set a reasonable timeout for GPT-5 to prevent hanging
+                gpt5_timeout = 300  # 5 minutes per API call
+                # print(f"GPT-5 detected: {model}, setting timeout to {gpt5_timeout}s")
 
-                # Create a dictionary with all LLMConfig parameters except 'stop' and 'top_p'
+                # Create a dictionary with all LLMConfig parameters for GPT-5
                 config_params = {
                     "model": model,
                     "api_key": Secrets.get_api_key(),
@@ -149,17 +150,20 @@ class PRArenaIssueResolver(IssueResolver):
                     "retry_min_wait": llm_retry_min_wait,
                     "retry_max_wait": llm_retry_max_wait,
                     "retry_multiplier": llm_retry_multiplier,
-                    "timeout": llm_timeout,
-                    "drop_params": needs_drop_params,
-                    # "reasoning_effort": reasoning_effort,  # COMMENTED OUT: Not supported by LiteLLM for OpenAI models
+                    "timeout": gpt5_timeout,  # Use specific timeout for GPT-5
+                    "drop_params": True,  # Force drop_params for GPT-5
                     "temperature": temperature,
                 }
                 
                 llm_config = LLMConfig(**config_params)
                 
-                # Explicitly set stop to None for GPT-5 models to prevent it from being passed
+                # Explicitly set problematic parameters to None for GPT-5
                 if hasattr(llm_config, "stop"):
                     llm_config.stop = None
+                if hasattr(llm_config, "top_p"):
+                    llm_config.top_p = None
+                if hasattr(llm_config, "max_tokens"):
+                    llm_config.max_tokens = 4000  # Set reasonable limit
             else:
                 llm_config = LLMConfig(
                     model=model,
