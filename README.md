@@ -49,9 +49,16 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
     - Code info: `agent code (git_diffs)`, `commit hash`, `repository language composition`
 
 ##  Q&A
-**Q. How can I track the progress?**
+### Can I use the App in my forked repository?
+✅ Yes — you can install and use OpenHands PR Arena in a forked repository.
+⚠️ Note: GitHub disables Issues on forks by default. To enable them:
+1. Go to your forked repository.
+2. Navigate to Settings → General.
+3. Scroll down to Features.
+4. Check the box for Issues.
 
-A. The agent will automatically **comment on the issue** at each stage of the process:
+### How can I track the progress?
+The agent will automatically **comment on the issue** at each stage of the process:
   - `👐 OpenHands PR-Arena has started the task: [click here for details]. For more info about how to use OpenHands PR-Arena, [click this link].`
     - Step 1. OpenHands begins resolving the issue. Please wait 10 ~ 20 minutes for the next comment.
   - `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link].`
@@ -59,17 +66,14 @@ A. The agent will automatically **comment on the issue** at each stage of the pr
   - `PR has been created based on the fix you've selected. Please review the changes.`
     - Step 3. A pull request has been created. You can now review and merge it.
 
-**Q. What happens if an error occurs?**
+### What happens if an error occurs?
+If an error occurs, the agent will comment on the issue with an appropriate message. You can retry by removing the `pr-arena` label, waiting 5 seconds, and adding it again.
 
-A. If an error occurs, the agent will comment on the issue with an appropriate message. You can retry by removing the `pr-arena` label, waiting 5 seconds, and adding it again.
+### How long does the process take?
+The time depends on the complexity of the issue. Some models may take longer to process depending on the complexity of the task. Typically, it should take **less than 30 minutes**, so please be patient.
 
-**Q. How long does the process take?**
-
-A. The time depends on the complexity of the issue. Some reasoning models may take longer to process. Typically, it should take **less than 30 minutes**, so please be patient.
-
-**Q. How does this affect my GitHub Actions build minutes?**
-
-A. The workflow makes API calls to our backend infrastructure where OpenHands agents run remotely. Your GitHub Actions runner only handles lightweight tasks like triggering the workflow and creating pull requests. The actual AI processing and code generation happens on our servers, so it consumes minimal GitHub Actions minutes (typically just a few minutes per issue).
+### How does this affect my GitHub Actions build minutes?**
+The workflow makes API calls to our backend infrastructure where OpenHands agents run remotely. Your GitHub Actions runner only handles lightweight tasks like triggering the workflow and creating pull requests. The actual AI processing and code generation happens on our servers, so it consumes minimal GitHub Actions minutes (typically just a few minutes per issue).
 
 ## Security & Permission
 This GitHub App requires the following permissions:
