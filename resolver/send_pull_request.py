@@ -321,9 +321,9 @@ def make_commit_with_summary(
 
     model_number = output_dir[-1] if output_dir else ""
     if model_number == "1":
-        tail_str = "1st Model"
+        tail_str = "Model A"
     elif model_number == "2":
-        tail_str = "2nd Model"
+        tail_str = "Model B"
     else:
         raise ValueError(f"Invalid model number: {model_number}")
 
