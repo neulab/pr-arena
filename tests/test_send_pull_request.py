@@ -346,7 +346,7 @@ class TestMakeCommitWithSummary(unittest.TestCase):
         commit_call = commit_calls[-1]
         commit_message = commit_call[0][0][-1]  # Last argument of git commit command
         
-        self.assertIn("Fix issue #123 with 1st Model", commit_message)
+        self.assertIn("Fix issue #123 with Model A", commit_message)
         self.assertIn("Summary of Changes:", commit_message)
         self.assertIn("Duration: 2m 0s", commit_message)
 
