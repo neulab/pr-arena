@@ -229,9 +229,19 @@ jobs:
               body: `❌ PR-Arena encountered an error while waiting for your decision. Please remove the 'pr-arena' label and add it back to retry.`
             });
 
+      - name: Check if user selected neither
+        id: check_neither
+        if: steps.check_decision.outputs.decision_failed != 'true'
+        run: |
+          if [ "${{ env.SELECTED_NEITHER }}" == "TRUE" ]; then
+            echo "selected_neither=true" >> $GITHUB_OUTPUT
+          else
+            echo "selected_neither=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Check if selected model has empty patch
         id: check_empty_patch
-        if: steps.check_decision.outputs.decision_failed != 'true'
+        if: steps.check_decision.outputs.decision_failed != 'true' && steps.check_neither.outputs.selected_neither != 'true'
         run: |
           if [ "${{ env.SELECTED_MODEL_EMPTY_PATCH }}" == "TRUE" ]; then
             echo "empty_patch=true" >> $GITHUB_OUTPUT
@@ -241,7 +251,7 @@ jobs:
 
       - name: Create Pull Request for the selected branch
         id: create_pr
-        if: steps.check_decision.outputs.decision_failed != 'true' && steps.check_empty_patch.outputs.empty_patch != 'true'
+        if: steps.check_decision.outputs.decision_failed != 'true' && steps.check_neither.outputs.selected_neither != 'true' && steps.check_empty_patch.outputs.empty_patch != 'true'
         run: |
           cd /tmp && python -m resolver.send_pull_request \
             --issue-number ${{ inputs.issue_number }} \
@@ -253,6 +263,19 @@ jobs:
             grep "draft created" pr_result${{ env.SELECTED }}.txt | sed 's/.*\///g' > pr_number.txt
         continue-on-error: true
 
+      - name: Comment on issue with neither selected message
+        if: steps.check_neither.outputs.selected_neither == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ inputs.pat_token }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ inputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `You chose ‘neither,’ so no PR was created—neither fix fit the issue.`
+            });
+
       - name: Comment on issue with empty patch message
         if: steps.check_empty_patch.outputs.empty_patch == 'true'
         uses: actions/github-script@v7
@@ -263,7 +286,7 @@ jobs:
               issue_number: ${{ inputs.issue_number }},
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `✅ You have chosen the model with no changes, so no PR has been created. The selected model didn't make any code modifications to address this issue.`
+              body: `You chose the model with no changes, so no PR was created—it didn’t modify any code for this issue.`
             });
 
       - name: Comment on issue

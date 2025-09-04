@@ -51,41 +51,46 @@ async def get_selected_model_number(
                 elif winner == "tie":
                     # In case of a tie, default to model 1
                     selected = "1"
-
+                elif winner == "neither":
+                    # User chose neither solution
+                    selected = "neither"
+                
                 if selected is None:
                     logger.error(f"Unknown winner value: {winner}")
                     selected = "1"  # Default to model 1 if winner value is unknown
 
                 # Check if the selected model has an empty patch by fetching the issue data
-                # Get the issue document to check for empty patches
-                issue_doc_ref = db.collection("issue_collection").document(uuid)
-                issue_doc = issue_doc_ref.get()
-
+                # Skip patch check for "neither" selection
                 selected_model_has_empty_patch = False
-                if issue_doc.exists:
-                    issue_data = issue_doc.to_dict()
-                    models = issue_data.get("models", {})
+                if selected != "neither":
+                    # Get the issue document to check for empty patches
+                    issue_doc_ref = db.collection("issue_collection").document(uuid)
+                    issue_doc = issue_doc_ref.get()
 
-                    # Check if the selected model has empty agent_code (git patch)
-                    if winner == "modelA":
-                        selected_model_code = models.get("modelA", {}).get(
-                            "agent_code", ""
-                        )
-                    elif winner == "modelB":
-                        selected_model_code = models.get("modelB", {}).get(
-                            "agent_code", ""
-                        )
-                    elif winner == "tie":
-                        # For tie, check model A (which we default to)
-                        selected_model_code = models.get("modelA", {}).get(
-                            "agent_code", ""
-                        )
-                    else:
-                        selected_model_code = ""
+                    if issue_doc.exists:
+                        issue_data = issue_doc.to_dict()
+                        models = issue_data.get("models", {})
 
-                    selected_model_has_empty_patch = (
-                        not selected_model_code or selected_model_code.strip() == ""
-                    )
+                        # Check if the selected model has empty agent_code (git patch)
+                        if winner == "modelA":
+                            selected_model_code = models.get("modelA", {}).get(
+                                "agent_code", ""
+                            )
+                        elif winner == "modelB":
+                            selected_model_code = models.get("modelB", {}).get(
+                                "agent_code", ""
+                            )
+                        elif winner == "tie":
+                            # For tie, check model A (which we default to)
+                            selected_model_code = models.get("modelA", {}).get(
+                                "agent_code", ""
+                            )
+                        else:
+                            selected_model_code = ""
+
+                        selected_model_has_empty_patch = (
+                            not selected_model_code or selected_model_code.strip() == ""
+                        )
 
                 # Write to GitHub environment file
                 github_env_path = os.getenv("GITHUB_ENV")
@@ -94,14 +99,22 @@ async def get_selected_model_number(
 
                 with open(github_env_path, "a") as env_file:
                     env_file.write(f"SELECTED={selected}\n")
-                    # Add flag for empty patch detection
-                    if selected_model_has_empty_patch:
-                        env_file.write("SELECTED_MODEL_EMPTY_PATCH=TRUE\n")
-                        logger.info(
-                            f"Selected model #{selected} has empty patch, flagged in environment."
-                        )
-                    else:
+                    
+                    # Handle "neither" case
+                    if selected == "neither":
+                        env_file.write("SELECTED_NEITHER=TRUE\n")
                         env_file.write("SELECTED_MODEL_EMPTY_PATCH=FALSE\n")
+                        logger.info("User selected 'neither' - no PR will be created.")
+                    else:
+                        env_file.write("SELECTED_NEITHER=FALSE\n")
+                        # Add flag for empty patch detection
+                        if selected_model_has_empty_patch:
+                            env_file.write("SELECTED_MODEL_EMPTY_PATCH=TRUE\n")
+                            logger.info(
+                                f"Selected model #{selected} has empty patch, flagged in environment."
+                            )
+                        else:
+                            env_file.write("SELECTED_MODEL_EMPTY_PATCH=FALSE\n")
 
                 # Also update the user_collection with the choice
                 try:
