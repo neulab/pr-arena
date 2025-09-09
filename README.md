@@ -72,7 +72,7 @@ If an error occurs, the agent will comment on the issue with an appropriate mess
 ### How long does the process take?
 The time depends on the complexity of the issue. Some models may take longer to process depending on the complexity of the task. Typically, it should take **less than 30 minutes**, so please be patient.
 
-### How does this affect my GitHub Actions build minutes?**
+### How does this affect my GitHub Actions build minutes?
 The workflow makes API calls to our backend infrastructure where OpenHands agents run remotely. Your GitHub Actions runner only handles lightweight tasks like triggering the workflow and creating pull requests. The actual AI processing and code generation happens on our servers, so it consumes minimal GitHub Actions minutes (typically just a few minutes per issue).
 
 ## Security & Permission
