@@ -1104,10 +1104,10 @@ class PRArenaIssueResolver(IssueResolver):
                 output_cost = output_tokens * (llm_config.output_cost_per_token or 0)
                 resolver_output.accumulated_cost = input_cost + output_cost
                 
-            logger.info(f"Cost calculation for {llm_config.model}: ${resolver_output.accumulated_cost:.4f}")
+            logger.info(f"Cost calculation for **MODEL NAME REDACTED**: ${resolver_output.accumulated_cost:.4f}")
                 
         except Exception as e:
-            logger.warning(f"Failed to calculate costs for model {llm_config.model}: {e}")
+            logger.warning(f"Failed to calculate costs for model **MODEL NAME REDACTED**: {e}")
             resolver_output.accumulated_cost = 0.0
             resolver_output.token_usage = {}
 
