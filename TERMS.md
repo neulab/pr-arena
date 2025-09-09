@@ -198,7 +198,7 @@ For questions, concerns, or requests regarding these Terms or the Service:
 
 **NeuLab - Carnegie Mellon University**  
 **Language Technologies Institute**  
-**Email**: [Contact information to be provided]  
+**Email**: jiseungh@andrew.cmu.edu
 **GitHub**: https://github.com/neulab/pr-arena
 
 ## 13. Changes to Terms
