@@ -83,7 +83,7 @@ def setup_logging(model_name: str) -> tuple[str, Path]:
     logger.info(f"Starting comprehensive model test for: {model_name}")
     logger.info(f"Log file: {log_path}")
     logger.info(f"Trace directory: {trace_dir}")
-    logger.info(f"OpenHands debug mode enabled for detailed tracing")
+    logger.info("OpenHands debug mode enabled for detailed tracing")
     
     return str(log_path), trace_dir
 
@@ -442,7 +442,7 @@ def main():
         print("✅ Model test completed successfully!")
         print(f"Check the log file for detailed results: {log_file}")
         print(f"Check the trace directory for execution artifacts: {trace_dir}")
-        print(f"\nTrace contents:")
+        print("\nTrace contents:")
         if trace_dir.exists():
             for item in sorted(trace_dir.iterdir()):
                 if item.is_file():
