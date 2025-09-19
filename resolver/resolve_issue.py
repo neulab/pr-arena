@@ -521,6 +521,12 @@ class PRArenaIssueResolver(IssueResolver):
                     "duration": resolved_output_1.duration
                     if resolved_output_1.duration
                     else None,
+                    "success": resolved_output_1.success,
+                    "comment_success": resolved_output_1.comment_success,
+                    "iterations": {
+                        "total_iterations": resolved_output_1.total_iterations,
+                        "action_count": resolved_output_1.action_count,
+                    },
                     "cost": {
                         "accumulated_cost": resolved_output_1.accumulated_cost,
                         "token_usage": resolved_output_1.token_usage,
@@ -538,6 +544,12 @@ class PRArenaIssueResolver(IssueResolver):
                     "duration": resolved_output_2.duration
                     if resolved_output_2.duration
                     else None,
+                    "success": resolved_output_2.success,
+                    "comment_success": resolved_output_2.comment_success,
+                    "iterations": {
+                        "total_iterations": resolved_output_2.total_iterations,
+                        "action_count": resolved_output_2.action_count,
+                    },
                     "cost": {
                         "accumulated_cost": resolved_output_2.accumulated_cost,
                         "token_usage": resolved_output_2.token_usage,
@@ -764,6 +776,9 @@ class PRArenaIssueResolver(IssueResolver):
             
             # Extract cost information from metrics if available
             self._calculate_and_set_costs(customOutput)
+            
+            # Calculate iteration counts from history
+            self._calculate_and_set_iterations(customOutput)
 
         finally:
             logger.info("Finished.")
@@ -922,6 +937,9 @@ class PRArenaIssueResolver(IssueResolver):
             
             # Calculate costs for this specific model's execution
             self._calculate_and_set_costs_for_model(resolved_output, llm_config)
+            
+            # Calculate iteration counts from history
+            self._calculate_and_set_iterations(resolved_output)
 
             return resolved_output
 
@@ -1110,6 +1128,39 @@ class PRArenaIssueResolver(IssueResolver):
             logger.warning(f"Failed to calculate costs for model **MODEL NAME REDACTED**: {e}")
             resolver_output.accumulated_cost = 0.0
             resolver_output.token_usage = {}
+
+    def _calculate_and_set_iterations(self, resolver_output: CustomResolverOutput) -> None:
+        """Calculate and set iteration information from OpenHands history."""
+        try:
+            if resolver_output.history:
+                # Total events in history
+                resolver_output.total_iterations = len(resolver_output.history)
+                
+                # Count agent actions (approximate iteration count)
+                action_count = 0
+                for event in resolver_output.history:
+                    # OpenHands history events have different structures
+                    # Check for action events or agent-initiated events
+                    if isinstance(event, dict):
+                        event_type = event.get('event_type', '').lower()
+                        source = event.get('source', '').lower()
+                        
+                        # Count events that represent agent actions/iterations
+                        if (event_type in ['action', 'agent_action'] or 
+                            source in ['agent'] or
+                            event.get('action') is not None):
+                            action_count += 1
+                
+                resolver_output.action_count = action_count
+                logger.info(f"Iteration tracking: {resolver_output.total_iterations} total events, {action_count} agent actions")
+            else:
+                resolver_output.total_iterations = 0
+                resolver_output.action_count = 0
+                
+        except Exception as e:
+            logger.warning(f"Failed to calculate iterations: {e}")
+            resolver_output.total_iterations = 0
+            resolver_output.action_count = 0
 
 
 def main() -> None:

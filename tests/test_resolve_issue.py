@@ -41,13 +41,14 @@ class TestPRArenaIssueResolver(unittest.TestCase):
         """Clean up after tests"""
         self.env_patcher.stop()
 
-    @patch('resolver.resolve_issue.Secrets')
+    @patch('resolver.secrets.Secrets.get_api_key')
+    @patch('resolver.secrets.Secrets.get_firebase_config')
     @patch('resolver.resolve_issue.load_firebase_config')
     @patch('resolver.resolve_issue.apply_daytona_patch')
-    def test_init_valid_args(self, mock_apply_patch, mock_load_firebase, mock_secrets):
+    def test_init_valid_args(self, mock_apply_patch, mock_load_firebase, mock_get_firebase_config, mock_get_api_key):
         """Test PRArenaIssueResolver initialization with valid arguments"""
-        mock_secrets.get_api_key.return_value = "test-api-key"
-        mock_secrets.get_firebase_config.return_value = {"test": "config"}
+        mock_get_api_key.return_value = "test-api-key"
+        mock_get_firebase_config.return_value = '{"test": "config"}'
         mock_load_firebase.return_value = {"test": "config"}
         
         resolver = PRArenaIssueResolver(self.mock_args)
@@ -112,15 +113,16 @@ class TestPRArenaIssueResolver(unittest.TestCase):
             mock_super.assert_called_once_with(mock_runtime, "test-commit")
             mock_runtime.close.assert_called_once()
 
-    @patch('resolver.resolve_issue.Secrets')
+    @patch('resolver.secrets.Secrets.get_api_key')
+    @patch('resolver.secrets.Secrets.get_firebase_config')
     @patch('resolver.resolve_issue.load_firebase_config')
     @patch('resolver.resolve_issue.apply_daytona_patch')
     @patch('resolver.resolve_issue.subprocess.run')
     def test_prepare_branch_and_push_invalid_pr_type(self, mock_subprocess, mock_apply_patch, 
-                                                    mock_load_firebase, mock_secrets):
+                                                    mock_load_firebase, mock_get_firebase_config, mock_get_api_key):
         """Test prepare_branch_and_push with invalid pr_type"""
-        mock_secrets.get_api_key.return_value = "test-api-key"
-        mock_secrets.get_firebase_config.return_value = {"test": "config"}
+        mock_get_api_key.return_value = "test-api-key"
+        mock_get_firebase_config.return_value = '{"test": "config"}'
         mock_load_firebase.return_value = {"test": "config"}
         
         resolver = PRArenaIssueResolver(self.mock_args)
@@ -130,17 +132,18 @@ class TestPRArenaIssueResolver(unittest.TestCase):
         
         self.assertIn("Invalid pr_type", str(context.exception))
 
-    @patch('resolver.resolve_issue.Secrets')
+    @patch('resolver.secrets.Secrets.get_api_key')
+    @patch('resolver.secrets.Secrets.get_firebase_config')
     @patch('resolver.resolve_issue.load_firebase_config')
     @patch('resolver.resolve_issue.apply_daytona_patch')
     @patch('resolver.resolve_issue.requests.get')
     @patch('resolver.resolve_issue.httpx.get')
     @patch('resolver.resolve_issue.subprocess.run')
     def test_prepare_branch_and_push_success(self, mock_subprocess, mock_httpx, mock_requests,
-                                           mock_apply_patch, mock_load_firebase, mock_secrets):
+                                           mock_apply_patch, mock_load_firebase, mock_get_firebase_config, mock_get_api_key):
         """Test successful prepare_branch_and_push execution"""
-        mock_secrets.get_api_key.return_value = "test-api-key"
-        mock_secrets.get_firebase_config.return_value = {"test": "config"}
+        mock_get_api_key.return_value = "test-api-key"
+        mock_get_firebase_config.return_value = '{"test": "config"}'
         mock_load_firebase.return_value = {"test": "config"}
         
         resolver = PRArenaIssueResolver(self.mock_args)

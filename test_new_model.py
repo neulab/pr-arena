@@ -19,12 +19,15 @@ Example:
 
 import argparse
 import asyncio
+import json
 import logging
 import os
+import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
 from argparse import Namespace
+from typing import Any
 
 # Import the resolver classes
 from resolver.resolve_issue import PRArenaIssueResolver
@@ -33,41 +36,69 @@ from openhands.resolver.issue_handler_factory import IssueHandlerFactory
 from openhands.integrations.service_types import ProviderType
 
 
-def setup_logging(model_name: str) -> str:
-    """Set up logging to a separate file for the model test."""
+def setup_logging(model_name: str) -> tuple[str, Path]:
+    """Set up comprehensive logging and tracing for the model test."""
     # Create logs directory if it doesn't exist
     logs_dir = Path("model_test_logs")
     logs_dir.mkdir(exist_ok=True)
     
     # Create log filename with model name and date
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = f"{model_name.replace('/', '_')}_{timestamp}.log"
+    safe_model_name = model_name.replace('/', '_').replace('\\', '_')
+    log_filename = f"{safe_model_name}_{timestamp}.log"
     log_path = logs_dir / log_filename
     
-    # Configure logging
+    # Create trace directory for this test run
+    trace_dir = logs_dir / f"{safe_model_name}_{timestamp}_traces"
+    trace_dir.mkdir(exist_ok=True)
+    
+    # Clear any existing root handlers to avoid conflicts
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    # Configure comprehensive logging with detailed format
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        level=logging.DEBUG,  # Enable debug level for comprehensive tracing
+        format='%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
         handlers=[
-            logging.FileHandler(log_path),
-            logging.StreamHandler(sys.stdout)  # Also log to console
-        ]
+            logging.FileHandler(log_path, mode='w', encoding='utf-8'),
+            logging.StreamHandler(sys.stdout)
+        ],
+        force=True  # Force reconfiguration
     )
     
-    logger = logging.getLogger(__name__)
-    logger.info(f"Starting model test for: {model_name}")
-    logger.info(f"Log file: {log_path}")
+    # Set up OpenHands specific logging
+    openhands_logger = logging.getLogger('openhands')
+    openhands_logger.setLevel(logging.DEBUG)
     
-    return str(log_path)
+    # Enable detailed event logging
+    os.environ['DEBUG'] = 'true'
+    os.environ['LOG_ALL_EVENTS'] = 'true'
+    os.environ['LOG_LEVEL'] = 'DEBUG'
+    os.environ['DEBUG_RUNTIME'] = 'true'
+    os.environ['LOG_JSON'] = 'true'
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting comprehensive model test for: {model_name}")
+    logger.info(f"Log file: {log_path}")
+    logger.info(f"Trace directory: {trace_dir}")
+    logger.info("OpenHands debug mode enabled for detailed tracing")
+    
+    return str(log_path), trace_dir
 
 
 def create_test_args(model_name: str, api_key: str, github_token: str, 
-                    repo: str, issue_number: int, github_username: str) -> Namespace:
+                    repo: str, issue_number: int, github_username: str, trace_dir: Path) -> Namespace:
     """Create the arguments namespace for PRArenaIssueResolver."""
     
-    # Set up output directory for this test
+    # Set up output directory for this test (use trace_dir parent for consistency)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_dir = f"test_output_{model_name.replace('/', '_')}_{timestamp}"
+    safe_model_name = model_name.replace('/', '_').replace('\\', '_')
+    output_dir = f"test_output_{safe_model_name}_{timestamp}"
+    
+    # Store trace directory for later use
+    trace_dir_str = str(trace_dir)
     
     args = Namespace(
         # Repository and issue settings
@@ -93,6 +124,7 @@ def create_test_args(model_name: str, api_key: str, github_token: str,
         # Output settings
         output_dir=output_dir,
         max_iterations=50,
+        trace_dir=trace_dir_str,  # Add trace directory
         
         # Optional settings
         prompt_file=None,
@@ -103,8 +135,92 @@ def create_test_args(model_name: str, api_key: str, github_token: str,
     return args
 
 
+def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str, 
+                        issue_number: int, result: Any) -> None:
+    """Save detailed execution traces and artifacts."""
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Copy all output files to trace directory
+        output_path = Path(output_dir)
+        if output_path.exists():
+            logger.info(f"Copying output artifacts from {output_path} to {trace_dir}")
+            
+            # Copy the entire output directory structure
+            shutil.copytree(output_path, trace_dir / "output", dirs_exist_ok=True)
+            
+            # Create a comprehensive trace summary
+            trace_summary = {
+                "model_name": model_name,
+                "issue_number": issue_number,
+                "timestamp": datetime.now().isoformat(),
+                "success": result.success if result else False,
+                "output_directory": output_dir,
+                "trace_directory": str(trace_dir),
+                "artifacts": {
+                    "output_jsonl": str(trace_dir / "output" / "output.jsonl") if (trace_dir / "output" / "output.jsonl").exists() else None,
+                    "repo_clone": str(trace_dir / "output" / "repo") if (trace_dir / "output" / "repo").exists() else None,
+                    "inference_logs": str(trace_dir / "output" / "infer_logs") if (trace_dir / "output" / "infer_logs").exists() else None,
+                }
+            }
+            
+            if result:
+                trace_summary.update({
+                    "git_patch_length": len(result.git_patch) if result.git_patch else 0,
+                    "has_git_patch": bool(result.git_patch),
+                    "duration": result.duration if hasattr(result, 'duration') else None,
+                    "accumulated_cost": result.accumulated_cost if hasattr(result, 'accumulated_cost') else None,
+                    "result_explanation": result.result_explanation if hasattr(result, 'result_explanation') else None,
+                    "error": result.error if hasattr(result, 'error') else None,
+                })
+            
+            # Save trace summary
+            with open(trace_dir / "trace_summary.json", 'w') as f:
+                json.dump(trace_summary, f, indent=2)
+            
+            logger.info(f"Trace summary saved to {trace_dir / 'trace_summary.json'}")
+            
+            # Extract and save conversation history if available
+            if result and hasattr(result, 'history'):
+                history_file = trace_dir / "conversation_history.jsonl"
+                with open(history_file, 'w') as f:
+                    for event in result.history:
+                        f.write(json.dumps(event) + '\n')
+                logger.info(f"Conversation history saved to {history_file}")
+            
+            # Save git patch separately if it exists
+            if result and hasattr(result, 'git_patch') and result.git_patch:
+                patch_file = trace_dir / "git_patch.diff"
+                with open(patch_file, 'w') as f:
+                    f.write(result.git_patch)
+                logger.info(f"Git patch saved to {patch_file}")
+                
+            # Also save git patch to a clearly visible JSON file in the trace directory
+            if result and hasattr(result, 'git_patch') and result.git_patch:
+                visible_output = {
+                    "model_name": model_name,
+                    "issue_number": issue_number,
+                    "timestamp": datetime.now().isoformat(),
+                    "success": result.success if result else False,
+                    "git_patch": result.git_patch,
+                    "result_explanation": result.result_explanation if hasattr(result, 'result_explanation') else None,
+                    "error": result.error if hasattr(result, 'error') else None
+                }
+                
+                visible_file = trace_dir / "result_output.json"
+                with open(visible_file, 'w') as f:
+                    json.dump(visible_output, f, indent=2)
+                logger.info(f"Visible result output saved to {visible_file}")
+                
+        else:
+            logger.warning(f"Output directory {output_path} does not exist - no artifacts to save")
+            
+    except Exception as e:
+        logger.error(f"Failed to save detailed traces: {str(e)}", exc_info=True)
+
+
 async def test_model_resolution(model_name: str, api_key: str, github_token: str,
-                               repo: str, issue_number: int, github_username: str) -> None:
+                               repo: str, issue_number: int, github_username: str, trace_dir: Path) -> None:
     """Test a specific model's ability to resolve a GitHub issue."""
     
     logger = logging.getLogger(__name__)
@@ -115,7 +231,7 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         
         # Mock the get_api_key method to return our provided API key
         # This bypasses the Firebase Function call for testing
-        def mock_get_api_key(cls):
+        def mock_get_api_key(cls=None):
             return api_key
         
         # Replace the class method with our mock
@@ -125,7 +241,7 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         os.environ['LLM_API_KEY'] = api_key
         
         # Create test arguments
-        args = create_test_args(model_name, api_key, github_token, repo, issue_number, github_username)
+        args = create_test_args(model_name, api_key, github_token, repo, issue_number, github_username, trace_dir)
         
         logger.info(f"Testing model: {model_name}")
         logger.info(f"Repository: {repo}")
@@ -174,12 +290,28 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
             logger.info(f"Git patch generated: {'Yes' if result.git_patch else 'No'}")
             if result.git_patch:
                 logger.info(f"Patch length: {len(result.git_patch)} characters")
+                # Log first few lines of patch for quick preview
+                patch_lines = result.git_patch.split('\n')[:10]
+                logger.info(f"Patch preview (first 10 lines):\n{chr(10).join(patch_lines)}")
+            
+            # Log cost information if available
+            if hasattr(result, 'accumulated_cost') and result.accumulated_cost:
+                logger.info(f"Total cost: ${result.accumulated_cost:.4f}")
+            
+            # Log token usage if available
+            if hasattr(result, 'token_usage') and result.token_usage:
+                logger.info(f"Token usage: {result.token_usage}")
             
             # Log any errors
             if result.error:
                 logger.warning(f"Error occurred: {result.error}")
         else:
             logger.error("No result returned from resolver")
+            
+        # Save detailed traces and artifacts
+        logger.info("Saving detailed execution traces...")
+        save_detailed_traces(args.output_dir, trace_dir, model_name, issue_number, result)
+        logger.info(f"All traces and artifacts saved to: {trace_dir}")
             
     except Exception as e:
         logger.error(f"Test failed with exception: {str(e)}", exc_info=True)
@@ -281,8 +413,8 @@ def main():
     # Default username if not provided
     github_username = args.github_username or "pr-arena-tester"
     
-    # Set up logging
-    log_file = setup_logging(args.model_name)
+    # Set up comprehensive logging and tracing
+    log_file, trace_dir = setup_logging(args.model_name)
     
     # Create .gitignore entries
     create_gitignore()
@@ -291,6 +423,7 @@ def main():
     print(f"Repository: {args.repo}")
     print(f"Issue: #{args.issue_number}")
     print(f"Logs will be written to: {log_file}")
+    print(f"Traces and artifacts will be saved to: {trace_dir}")
     print("-" * 50)
     
     try:
@@ -301,12 +434,21 @@ def main():
             github_token=args.github_token,
             repo=args.repo,
             issue_number=args.issue_number,
-            github_username=github_username
+            github_username=github_username,
+            trace_dir=trace_dir
         ))
         
         print("-" * 50)
         print("✅ Model test completed successfully!")
         print(f"Check the log file for detailed results: {log_file}")
+        print(f"Check the trace directory for execution artifacts: {trace_dir}")
+        print("\nTrace contents:")
+        if trace_dir.exists():
+            for item in sorted(trace_dir.iterdir()):
+                if item.is_file():
+                    print(f"  📄 {item.name}")
+                elif item.is_dir():
+                    print(f"  📁 {item.name}/")
         
     except KeyboardInterrupt:
         print("\n❌ Test interrupted by user")
@@ -314,6 +456,7 @@ def main():
     except Exception as e:
         print(f"\n❌ Test failed: {str(e)}")
         print(f"Check the log file for details: {log_file}")
+        print(f"Check the trace directory for debugging info: {trace_dir}")
         sys.exit(1)
 
 
