@@ -30,3 +30,7 @@ class CustomResolverOutput(ResolverOutput):
     token_usage: dict[str, Any] | None = Field(default=None)
     cost_per_input_token: float | None = Field(default=None)
     cost_per_output_token: float | None = Field(default=None)
+    
+    # Iteration tracking fields
+    total_iterations: int | None = Field(default=None)
+    action_count: int | None = Field(default=None)
