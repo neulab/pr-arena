@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "pr-arena"
-version = "0.2.4"
+version = "0.2.5"
 description = "PR-Arena: Arena Setting for GitHub Issue Resolver"
 authors = ["OpenHands"]
 license = "MIT"
