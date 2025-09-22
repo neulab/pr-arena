@@ -5,4 +5,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    open-pull-requests-limit: 10
+    groups:
+      all-pip-updates:
+        patterns: ["*"]
+    open-pull-requests-limit: 1
