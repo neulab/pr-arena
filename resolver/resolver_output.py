@@ -7,7 +7,7 @@ class CustomResolverOutput(ResolverOutput):
     # Override parent fields with defaults for testing compatibility
     instruction: str = Field(default="")
     base_commit: str = Field(default="")
-    git_patch: str | None = Field(default=None)
+    git_patch: str = Field(default="")
     history: list[dict[str, Any]] = Field(default_factory=list)
     metrics: dict[str, Any] | None = Field(default=None)
     success: bool = Field(default=True)

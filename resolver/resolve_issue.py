@@ -31,7 +31,6 @@ apply_daytona_patch()
 
 from openhands.core.config import LLMConfig  # noqa: E402
 from openhands.core.logger import openhands_logger as logger  # noqa: E402
-from openhands.integrations.service_types import ProviderType  # noqa: E402
 from openhands.resolver.interfaces.issue import Issue  # noqa: E402
 from openhands.resolver.issue_handler_factory import IssueHandlerFactory  # noqa: E402
 from openhands.resolver.issue_resolver import IssueResolver  # noqa: E402
@@ -71,29 +70,15 @@ class PRArenaIssueResolver(IssueResolver):
     output_dir: str
 
     def __init__(self, args: Namespace) -> None:
-        # super().__init__(args) # Most shared arguments are processed by parent class
+        # Call parent constructor to set up basic configuration
+        super().__init__(args)
 
-        # Setup and validate container images
-        self.sandbox_config = self._setup_sandbox_config(
-            args.base_container_image,
-            args.runtime_container_image,
-            args.is_experimental,
-        )
-
-        parts = args.selected_repo.rsplit("/", 1)
-        if len(parts) < 2:
-            raise ValueError("Invalid repository format. Expected owner/repo")
-        owner, repo = parts
-
-        token = args.token or os.getenv("GITHUB_TOKEN") or os.getenv("GITLAB_TOKEN")
-        username = args.username if args.username else os.getenv("GIT_USERNAME")
-        if not username:
-            raise ValueError("Username is required.")
-
-        if not token:
-            raise ValueError("Token is required.")
-
-        platform = ProviderType.GITHUB
+        # Get values from parent initialization
+        owner = self.owner
+        repo = self.repo
+        platform = self.platform
+        token = self.issue_handler.token
+        username = self.issue_handler.username
 
         base_url = args.llm_base_url
         api_version = os.environ.get("LLM_API_VERSION", None)
@@ -157,17 +142,17 @@ class PRArenaIssueResolver(IssueResolver):
                 
                 # GPT-5 specific parameter cleanup - remove all custom parameters that aren't supported
                 if hasattr(llm_config, "temperature"):
-                    llm_config.temperature = None  # Use default (1.0)
+                    llm_config.temperature = 1.0  # Use default
                 if hasattr(llm_config, "stop"):
                     llm_config.stop = None
                 if hasattr(llm_config, "top_p"):
-                    llm_config.top_p = None
+                    llm_config.top_p = 1.0  # Use default
                 if hasattr(llm_config, "max_tokens"):
                     llm_config.max_tokens = 2000  # Shorter responses for precision
                 if hasattr(llm_config, "frequency_penalty"):
-                    llm_config.frequency_penalty = None
+                    llm_config.frequency_penalty = 0.0  # Use default
                 if hasattr(llm_config, "presence_penalty"):
-                    llm_config.presence_penalty = None
+                    llm_config.presence_penalty = 0.0  # Use default
             else:
                 llm_config = LLMConfig(
                     model=model,
@@ -192,15 +177,15 @@ class PRArenaIssueResolver(IssueResolver):
 
             if "o4-mini" in model and hasattr(llm_config, "top_p"):
                 # o4-mini models require top_p to be set to None
-                llm_config.top_p = None
+                llm_config.top_p = None  # type: ignore
 
             if "o3-mini" in model and hasattr(llm_config, "top_p"):
                 # o3-mini models require top_p to be set to None
-                llm_config.top_p = None
+                llm_config.top_p = None  # type: ignore
 
             if "o1-mini" in model and hasattr(llm_config, "top_p"):
                 # o1-mini models require top_p to be set to None
-                llm_config.top_p = None
+                llm_config.top_p = None  # type: ignore
 
             if "o1-mini" in model and hasattr(llm_config, "stop"):
                 # o1-mini models require stop to be set to None
@@ -614,7 +599,7 @@ class PRArenaIssueResolver(IssueResolver):
         # print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
         # print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
 
-    async def resolve_issue(
+    async def resolve_issue(  # type: ignore[override]
         self,
         reset_logger: bool = False,
     ) -> CustomResolverOutput:

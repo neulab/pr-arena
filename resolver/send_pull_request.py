@@ -539,7 +539,7 @@ def update_existing_pull_request(
 
                 # Summarize with LLM if provided
                 if llm_config is not None:
-                    llm = LLM(llm_config)
+                    llm = LLM(llm_config, service_id="pr_summary")
                     with open(
                         os.path.join(
                             os.path.dirname(__file__),
@@ -582,7 +582,7 @@ def process_single_issue(
     username: str,
     platform: ProviderType,
     pr_type: str,
-    llm_config: LLMConfig,
+    llm_config: LLMConfig | None,
     fork_owner: str | None,
     send_on_failure: bool,
     target_branch: str | None = None,
