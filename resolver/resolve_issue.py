@@ -74,10 +74,23 @@ class PRArenaIssueResolver(IssueResolver):
         # super().__init__(args) # Most shared arguments are processed by parent class
 
         # Setup and validate container images
-        self.sandbox_config = self._setup_sandbox_config(
+        from openhands.core.config import load_openhands_config
+        from openhands.resolver.issue_resolver import IssueResolver
+        
+        # Create workspace base directory
+        self.workspace_base = IssueResolver.build_workspace_base(
+            args.output_dir, args.issue_type, args.issue_number
+        )
+        
+        # Update OpenHands config with sandbox settings
+        self.app_config = IssueResolver.update_openhands_config(
+            load_openhands_config(),
+            args.max_iterations,
+            self.workspace_base,
             args.base_container_image,
             args.runtime_container_image,
             args.is_experimental,
+            getattr(args, 'runtime', None),
         )
 
         parts = args.selected_repo.rsplit("/", 1)
