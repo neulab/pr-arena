@@ -34,3 +34,4 @@ class CustomResolverOutput(ResolverOutput):
     # Iteration tracking fields
     total_iterations: int | None = Field(default=None)
     action_count: int | None = Field(default=None)
+    iteration_number: int | None = Field(default=None)

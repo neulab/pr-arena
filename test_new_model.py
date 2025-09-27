@@ -80,10 +80,10 @@ def setup_logging(model_name: str) -> tuple[str, Path]:
     os.environ['LOG_JSON'] = 'true'
     
     logger = logging.getLogger(__name__)
-    logger.info(f"Starting comprehensive model test for: {model_name}")
-    logger.info(f"Log file: {log_path}")
-    logger.info(f"Trace directory: {trace_dir}")
-    logger.info("OpenHands debug mode enabled for detailed tracing")
+    print(f"Starting comprehensive model test for: {model_name}")
+    print(f"Log file: {log_path}")
+    print(f"Trace directory: {trace_dir}")
+    print("OpenHands debug mode enabled for detailed tracing")
     
     return str(log_path), trace_dir
 
@@ -144,7 +144,7 @@ def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str,
         # Copy all output files to trace directory
         output_path = Path(output_dir)
         if output_path.exists():
-            logger.info(f"Copying output artifacts from {output_path} to {trace_dir}")
+            print(f"Copying output artifacts from {output_path} to {trace_dir}")
             
             # Copy the entire output directory structure
             shutil.copytree(output_path, trace_dir / "output", dirs_exist_ok=True)
@@ -178,7 +178,7 @@ def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str,
             with open(trace_dir / "trace_summary.json", 'w') as f:
                 json.dump(trace_summary, f, indent=2)
             
-            logger.info(f"Trace summary saved to {trace_dir / 'trace_summary.json'}")
+            print(f"Trace summary saved to {trace_dir / 'trace_summary.json'}")
             
             # Extract and save conversation history if available
             if result and hasattr(result, 'history'):
@@ -186,14 +186,14 @@ def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str,
                 with open(history_file, 'w') as f:
                     for event in result.history:
                         f.write(json.dumps(event) + '\n')
-                logger.info(f"Conversation history saved to {history_file}")
+                print(f"Conversation history saved to {history_file}")
             
             # Save git patch separately if it exists
             if result and hasattr(result, 'git_patch') and result.git_patch:
                 patch_file = trace_dir / "git_patch.diff"
                 with open(patch_file, 'w') as f:
                     f.write(result.git_patch)
-                logger.info(f"Git patch saved to {patch_file}")
+                print(f"Git patch saved to {patch_file}")
                 
             # Also save git patch to a clearly visible JSON file in the trace directory
             if result and hasattr(result, 'git_patch') and result.git_patch:
@@ -210,7 +210,7 @@ def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str,
                 visible_file = trace_dir / "result_output.json"
                 with open(visible_file, 'w') as f:
                     json.dump(visible_output, f, indent=2)
-                logger.info(f"Visible result output saved to {visible_file}")
+                print(f"Visible result output saved to {visible_file}")
                 
         else:
             logger.warning(f"Output directory {output_path} does not exist - no artifacts to save")
@@ -243,17 +243,17 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         # Create test arguments
         args = create_test_args(model_name, api_key, github_token, repo, issue_number, github_username, trace_dir)
         
-        logger.info(f"Testing model: {model_name}")
-        logger.info(f"Repository: {repo}")
-        logger.info(f"Issue number: {issue_number}")
-        logger.info(f"Output directory: {args.output_dir}")
+        print(f"Testing model: {model_name}")
+        print(f"Repository: {repo}")
+        print(f"Issue number: {issue_number}")
+        print(f"Output directory: {args.output_dir}")
         
         # Initialize the resolver
-        logger.info("Initializing PRArenaIssueResolver...")
+        print("Initializing PRArenaIssueResolver...")
         resolver = PRArenaIssueResolver(args)
         
         # Set up the issue handler (required for resolve_issue)
-        logger.info("Setting up issue handler...")
+        print("Setting up issue handler...")
         llm_config = resolver.llm_configs[0]  # Use first available model
         resolver.llm_config = llm_config
         
@@ -271,7 +271,7 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         resolver.output_dir = args.output_dir
         
         # Run the resolution test
-        logger.info("Starting issue resolution...")
+        print("Starting issue resolution...")
         start_time = datetime.now()
         
         # Use resolve_issue() instead of resolve_issues_with_random_models()
@@ -282,36 +282,51 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
         duration = end_time - start_time
         
         # Log results
-        logger.info(f"Resolution completed in {duration}")
-        logger.info(f"Success: {result.success if result else 'Unknown'}")
+        print(f"Resolution completed in {duration}")
+        print(f"Success: {result.success if result else 'Unknown'}")
         
         if result:
-            logger.info(f"Result explanation: {result.result_explanation}")
-            logger.info(f"Git patch generated: {'Yes' if result.git_patch else 'No'}")
+            print(f"Result explanation: {result.result_explanation}")
+            print(f"Git patch generated: {'Yes' if result.git_patch else 'No'}")
             if result.git_patch:
-                logger.info(f"Patch length: {len(result.git_patch)} characters")
+                print(f"Patch length: {len(result.git_patch)} characters")
                 # Log first few lines of patch for quick preview
                 patch_lines = result.git_patch.split('\n')[:10]
-                logger.info(f"Patch preview (first 10 lines):\n{chr(10).join(patch_lines)}")
+                print(f"Patch preview (first 10 lines):\n{chr(10).join(patch_lines)}")
             
             # Log cost information if available
             if hasattr(result, 'accumulated_cost') and result.accumulated_cost:
-                logger.info(f"Total cost: ${result.accumulated_cost:.4f}")
+                print(f"Total cost: ${result.accumulated_cost:.4f}")
             
             # Log token usage if available
             if hasattr(result, 'token_usage') and result.token_usage:
-                logger.info(f"Token usage: {result.token_usage}")
+                print(f"Token usage: {result.token_usage}")
             
             # Log any errors
             if result.error:
-                logger.warning(f"Error occurred: {result.error}")
+                print(f"Error occurred: {result.error}")
         else:
-            logger.error("No result returned from resolver")
+            print("No result returned from resolver")
             
+        # Persist the resolver output for later inspection
+        resolver_output_file = Path(args.output_dir) / "resolver_output.txt"
+        try:
+            resolver_output_file.parent.mkdir(parents=True, exist_ok=True)
+            with resolver_output_file.open("w", encoding="utf-8") as f:
+                if result:
+                    json.dump(result.model_dump(), f, indent=2)
+                else:
+                    f.write("Resolver returned no result.\n")
+            print(f"Resolver output saved to {resolver_output_file}")
+        except Exception as write_err:
+            print(
+                f"Failed to write resolver output to {resolver_output_file}: {write_err}",
+            )
+
         # Save detailed traces and artifacts
-        logger.info("Saving detailed execution traces...")
+        print("Saving detailed execution traces...")
         save_detailed_traces(args.output_dir, trace_dir, model_name, issue_number, result)
-        logger.info(f"All traces and artifacts saved to: {trace_dir}")
+        print(f"All traces and artifacts saved to: {trace_dir}")
             
     except Exception as e:
         logger.error(f"Test failed with exception: {str(e)}", exc_info=True)

@@ -7,7 +7,7 @@ import subprocess
 import time
 import uuid
 from argparse import Namespace
-from typing import Any, cast
+from typing import Any
 
 import httpx
 import requests
@@ -478,27 +478,13 @@ class PRArenaIssueResolver(IssueResolver):
 
         # logger.info(f"Language information collected: {language_info}")
 
-        model_reference = {
-            "claude-sonnet-4-20250514": "model1",
-            "gpt-4.1-2025-04-14": "model2",
-            "Meta-Llama-3.1-405B-Instruct": "model3",
-            "o4-mini": "model4",
-            "gemini-2.5-pro-preview-05-06": "model5",
-            "Qwen-QwQ-32B-Preview": "model6",
-            "deepseek-v3": "model7",
-            "deepseek-r1": "model8",
-            "o3-mini": "model9",
-            "o1-mini": "model10",
-            "kimi-k2-0711-preview": "model11",
-            "gemini-2.5-pro-preview-06-05": "model12",
-        }
+        # Determine whether each model produced an empty git patch
+        model1_git_patch = resolved_output_1.git_patch or ""
+        model2_git_patch = resolved_output_2.git_patch or ""
+        model1_empty_patch = model1_git_patch.strip() == ""
+        model2_empty_patch = model2_git_patch.strip() == ""
 
-        model1_id = model_reference.get(
-            (cast(str, resolved_output_1.model)), "Model ID Not Found"
-        )
-        model2_id = model_reference.get(
-            (cast(str, resolved_output_2.model)), "Model ID Not Found"
-        )
+        reference_id = str(uuid.uuid4())
 
         # Create unified issue data structure that handles both empty and non-empty patches
         issue_data = {
@@ -512,12 +498,9 @@ class PRArenaIssueResolver(IssueResolver):
             "language_info": language_info,
             "models": {
                 "modelA": {
-                    "modelId": model1_id,
                     "modelName": resolved_output_1.model,
                     "commit_hash": resolved_output_1.commit_hash,
-                    "agent_code": resolved_output_1.git_patch
-                    if resolved_output_1.git_patch
-                    else "",
+                    "agent_code": model1_git_patch,
                     "duration": resolved_output_1.duration
                     if resolved_output_1.duration
                     else None,
@@ -526,6 +509,7 @@ class PRArenaIssueResolver(IssueResolver):
                     "iterations": {
                         "total_iterations": resolved_output_1.total_iterations,
                         "action_count": resolved_output_1.action_count,
+                        "iteration_number": resolved_output_1.iteration_number,
                     },
                     "cost": {
                         "accumulated_cost": resolved_output_1.accumulated_cost,
@@ -535,12 +519,9 @@ class PRArenaIssueResolver(IssueResolver):
                     },
                 },
                 "modelB": {
-                    "modelId": model2_id,
                     "modelName": resolved_output_2.model,
                     "commit_hash": resolved_output_2.commit_hash,
-                    "agent_code": resolved_output_2.git_patch
-                    if resolved_output_2.git_patch
-                    else "",
+                    "agent_code": model2_git_patch,
                     "duration": resolved_output_2.duration
                     if resolved_output_2.duration
                     else None,
@@ -549,6 +530,7 @@ class PRArenaIssueResolver(IssueResolver):
                     "iterations": {
                         "total_iterations": resolved_output_2.total_iterations,
                         "action_count": resolved_output_2.action_count,
+                        "iteration_number": resolved_output_2.iteration_number,
                     },
                     "cost": {
                         "accumulated_cost": resolved_output_2.accumulated_cost,
@@ -564,10 +546,35 @@ class PRArenaIssueResolver(IssueResolver):
             "installationToken": self.token,
         }
 
-        reference_id = str(uuid.uuid4())
-
         issue_ref = db.collection("issue_collection").document(reference_id)
         issue_ref.set(issue_data)
+
+        # Persist detailed histories for each model
+        history_timestamp = firestore.SERVER_TIMESTAMP
+        history_collection = db.collection("history_collection")
+        history_entries = {
+            f"{reference_id}_modelA": {
+                "uuid": reference_id,
+                "modelName": resolved_output_1.model,
+                "history": resolved_output_1.history or [],
+                "success": resolved_output_1.success,
+                "language_info": language_info,
+                "empty_git_patch": model1_empty_patch,
+                "createdAt": history_timestamp,
+            },
+            f"{reference_id}_modelB": {
+                "uuid": reference_id,
+                "modelName": resolved_output_2.model,
+                "history": resolved_output_2.history or [],
+                "success": resolved_output_2.success,
+                "language_info": language_info,
+                "empty_git_patch": model2_empty_patch,
+                "createdAt": history_timestamp,
+            },
+        }
+
+        for document_id, history_data in history_entries.items():
+            history_collection.document(document_id).set(history_data)
 
         current_time = firestore.SERVER_TIMESTAMP
 
@@ -594,11 +601,9 @@ class PRArenaIssueResolver(IssueResolver):
                         "patch_language_percentages", {}
                     ),
                     "modelA": {
-                        "modelId": model1_id,
                         "modelName": resolved_output_1.model,
                     },
                     "modelB": {
-                        "modelId": model2_id,
                         "modelName": resolved_output_2.model,
                     },
                 }
@@ -809,6 +814,7 @@ class PRArenaIssueResolver(IssueResolver):
                     result_explanation="Error occurred during processing",
                     error="Failed to complete processing",
                     duration=duration,
+                    iteration_number=0,
                 )
                 return error_output
 
@@ -1132,35 +1138,54 @@ class PRArenaIssueResolver(IssueResolver):
     def _calculate_and_set_iterations(self, resolver_output: CustomResolverOutput) -> None:
         """Calculate and set iteration information from OpenHands history."""
         try:
+            iteration_number = 0
             if resolver_output.history:
-                # Total events in history
+                # Total events in history (actions + observations)
                 resolver_output.total_iterations = len(resolver_output.history)
-                
+
                 # Count agent actions (approximate iteration count)
                 action_count = 0
                 for event in resolver_output.history:
                     # OpenHands history events have different structures
-                    # Check for action events or agent-initiated events
-                    if isinstance(event, dict):
-                        event_type = event.get('event_type', '').lower()
-                        source = event.get('source', '').lower()
-                        
-                        # Count events that represent agent actions/iterations
-                        if (event_type in ['action', 'agent_action'] or 
-                            source in ['agent'] or
-                            event.get('action') is not None):
-                            action_count += 1
-                
+                    if not isinstance(event, dict):
+                        continue
+
+                    event_type = str(event.get('event_type', '')).lower()
+                    source = str(event.get('source', '')).lower()
+                    action_name = event.get('action')
+
+                    # Count events that represent agent actions/iterations
+                    if (
+                        event_type in ['action', 'agent_action']
+                        or source in ['agent']
+                        or action_name is not None
+                    ):
+                        action_count += 1
+
+                    # Derive iteration number from actionable agent events
+                    if action_name is not None:
+                        action_name_str = str(action_name).lower()
+                        if action_name_str in ['message', 'system']:
+                            continue
+                        iteration_number += 1
+
                 resolver_output.action_count = action_count
-                logger.info(f"Iteration tracking: {resolver_output.total_iterations} total events, {action_count} agent actions")
+                resolver_output.iteration_number = iteration_number
+                logger.info(
+                    "Iteration tracking: %s total events, %s agent actions, %s iterations",
+                    resolver_output.total_iterations,
+                    action_count,
+                    iteration_number,
+                )
             else:
                 resolver_output.total_iterations = 0
                 resolver_output.action_count = 0
-                
+                resolver_output.iteration_number = 0
         except Exception as e:
             logger.warning(f"Failed to calculate iterations: {e}")
             resolver_output.total_iterations = 0
             resolver_output.action_count = 0
+            resolver_output.iteration_number = 0
 
 
 def main() -> None:
