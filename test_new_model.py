@@ -80,10 +80,10 @@ def setup_logging(model_name: str) -> tuple[str, Path]:
     os.environ['LOG_JSON'] = 'true'
     
     logger = logging.getLogger(__name__)
-    print(f"Starting comprehensive model test for: {model_name}")
-    print(f"Log file: {log_path}")
-    print(f"Trace directory: {trace_dir}")
-    print("OpenHands debug mode enabled for detailed tracing")
+    logger.info("Starting comprehensive model test for: %s", model_name)
+    logger.info("Log file: %s", log_path)
+    logger.info("Trace directory: %s", trace_dir)
+    logger.info("OpenHands debug mode enabled for detailed tracing")
     
     return str(log_path), trace_dir
 
