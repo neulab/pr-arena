@@ -45,7 +45,7 @@ def patch_openhands_for_gpt5():
         from openhands.llm import llm as openhands_llm_module
         if hasattr(openhands_llm_module, 'MODELS_WITHOUT_STOP_WORDS'):
             # Add GPT-5 models to the exclusion list (both base and full proxy names)
-            gpt5_models = ['gpt-5', 'litellm_proxy/neulab/gpt-5']
+            gpt5_models = ['gpt-5', 'litellm_proxy/neulab/gpt-5', 'litellm_proxy/azure/gpt-5', 'azure/gpt-5']
             current_models = list(openhands_llm_module.MODELS_WITHOUT_STOP_WORDS)
             for gpt5_model in gpt5_models:
                 if gpt5_model not in current_models:
