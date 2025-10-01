@@ -266,6 +266,12 @@ async def test_model_resolution(model_name: str, api_key: str, github_token: str
             llm_config = resolver.llm_configs[0]  # Use first available model
             resolver.llm_config = llm_config
 
+            # Verify API key is set in llm_config
+            if hasattr(llm_config, 'api_key') and llm_config.api_key:
+                logger.info(f"LLM Config API key: {str(llm_config.api_key)[:20]}...")
+            else:
+                logger.warning("LLM Config has no API key set!")
+
             factory = IssueHandlerFactory(
                 owner=resolver.owner,
                 repo=resolver.repo,

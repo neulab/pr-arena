@@ -29,7 +29,7 @@ from resolver.utils import get_comprehensive_language_info, load_firebase_config
 # Apply daytona compatibility patch before any openhands imports
 apply_daytona_patch()
 
-from openhands.core.config import LLMConfig  # noqa: E402
+from openhands.core.config import LLMConfig, SandboxConfig  # noqa: E402
 from openhands.core.logger import openhands_logger as logger  # noqa: E402
 from openhands.integrations.service_types import ProviderType  # noqa: E402
 from openhands.resolver.interfaces.issue import Issue  # noqa: E402
@@ -70,15 +70,11 @@ class PRArenaIssueResolver(IssueResolver):
     issue_handler: Any  # This will be set dynamically in _resolve_with_model
     output_dir: str
 
+    # Store API key for later use in sandbox config
+    _llm_api_key: str | None = None
+
     def __init__(self, args: Namespace) -> None:
         # super().__init__(args) # Most shared arguments are processed by parent class
-
-        # Setup and validate container images
-        self.sandbox_config = self._setup_sandbox_config(
-            args.base_container_image,
-            args.runtime_container_image,
-            args.is_experimental,
-        )
 
         parts = args.selected_repo.rsplit("/", 1)
         if len(parts) < 2:
@@ -105,6 +101,16 @@ class PRArenaIssueResolver(IssueResolver):
 
         # Use provided API key if available, otherwise fetch from secrets
         llm_api_key = args.llm_api_key if hasattr(args, 'llm_api_key') and args.llm_api_key else Secrets.get_api_key()
+
+        # Store API key for sandbox environment configuration
+        self._llm_api_key = llm_api_key
+
+        # Setup and validate container images (must be after setting _llm_api_key)
+        self.sandbox_config = self._setup_sandbox_config(
+            args.base_container_image,
+            args.runtime_container_image,
+            args.is_experimental,
+        )
 
         # Initialize values for custom resolver
         self.token = token
@@ -258,6 +264,31 @@ class PRArenaIssueResolver(IssueResolver):
             issue_number=self.issue_number,
             token=self.token,
         )
+
+    def _setup_sandbox_config(
+        self,
+        base_container_image: str | None,
+        runtime_container_image: str | None,
+        is_experimental: bool,
+    ) -> SandboxConfig:
+        """Override to add API key to sandbox runtime environment."""
+        # Call parent implementation
+        sandbox_config = super()._setup_sandbox_config(
+            base_container_image,
+            runtime_container_image,
+            is_experimental,
+        )
+
+        # Add API key to runtime environment variables so it's available in Docker container
+        if self._llm_api_key:
+            if not sandbox_config.runtime_startup_env_vars:
+                sandbox_config.runtime_startup_env_vars = {}
+            sandbox_config.runtime_startup_env_vars['LLM_API_KEY'] = self._llm_api_key
+            sandbox_config.runtime_startup_env_vars['LITELLM_API_KEY'] = self._llm_api_key
+            sandbox_config.runtime_startup_env_vars['OPENAI_API_KEY'] = self._llm_api_key
+            logger.info(f"Added API key to sandbox runtime environment (key starts with: {self._llm_api_key[:10]}...)")
+
+        return sandbox_config
 
     async def complete_runtime(
         self,
