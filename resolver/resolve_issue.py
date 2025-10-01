@@ -165,18 +165,9 @@ class PRArenaIssueResolver(IssueResolver):
                 llm_config = LLMConfig(**config_params)
                 
                 # GPT-5 specific parameter cleanup - remove all custom parameters that aren't supported
-                if hasattr(llm_config, "temperature"):
-                    llm_config.temperature = None  # Use default (1.0)
-                if hasattr(llm_config, "stop"):
-                    llm_config.stop = None
-                if hasattr(llm_config, "top_p"):
-                    llm_config.top_p = None
-                if hasattr(llm_config, "max_tokens"):
-                    llm_config.max_tokens = 2000  # Shorter responses for precision
-                if hasattr(llm_config, "frequency_penalty"):
-                    llm_config.frequency_penalty = None
-                if hasattr(llm_config, "presence_penalty"):
-                    llm_config.presence_penalty = None
+                # GPT-5 only supports reasoning_effort parameter through allowed_openai_params
+                # These should be configured in the LiteLLM proxy YAML with:
+                #   allowed_openai_params: ["reasoning_effort"]
             else:
                 llm_config = LLMConfig(
                     model=model,
@@ -199,21 +190,12 @@ class PRArenaIssueResolver(IssueResolver):
                 if hasattr(llm_config, "simplify_tools"):
                     llm_config.simplify_tools = True
 
-            if "o4-mini" in model and hasattr(llm_config, "top_p"):
-                # o4-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o3-mini" in model and hasattr(llm_config, "top_p"):
-                # o3-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o1-mini" in model and hasattr(llm_config, "top_p"):
-                # o1-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o1-mini" in model and hasattr(llm_config, "stop"):
-                # o1-mini models require stop to be set to None
-                llm_config.stop = None
+            # o-series models need specific parameter handling
+            # These models don't support certain OpenAI parameters
+            if "o4-mini" in model or "o3-mini" in model or "o1-mini" in model:
+                # The drop_params flag is already set above, which tells LiteLLM
+                # to automatically drop unsupported parameters
+                pass
 
             self.llm_configs.append(llm_config)
 

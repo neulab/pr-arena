@@ -1,0 +1,57 @@
+# LiteLLM Proxy Configuration
+# This configuration should be deployed on your LiteLLM proxy server (https://cmu.litellm.ai)
+# Reference: https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  # GPT-5 Models - Only supports reasoning_effort parameter
+  - model_name: "gpt-5-2025-08-07"
+    litellm_params:
+      model: "openai/gpt-5-2025-08-07"
+      api_key: os.environ/OPENAI_API_KEY
+      allowed_openai_params: ["reasoning_effort"]
+
+  - model_name: "gpt-5-mini-2025-08-07"
+    litellm_params:
+      model: "openai/gpt-5-mini-2025-08-07"
+      api_key: os.environ/OPENAI_API_KEY
+      allowed_openai_params: ["reasoning_effort"]
+
+  # Azure GPT-4.1 (example - adjust based on your deployment)
+  - model_name: "azure/gpt-4.1"
+    litellm_params:
+      model: "azure/gpt-4.1"
+      api_base: os.environ/AZURE_API_BASE
+      api_key: os.environ/AZURE_API_KEY
+      api_version: "2024-02-15-preview"
+
+  # O-series models - Drop unsupported parameters automatically
+  - model_name: "o1-mini"
+    litellm_params:
+      model: "openai/o1-mini"
+      api_key: os.environ/OPENAI_API_KEY
+      drop_params: true
+
+  - model_name: "o3-mini"
+    litellm_params:
+      model: "openai/o3-mini"
+      api_key: os.environ/OPENAI_API_KEY
+      drop_params: true
+
+  - model_name: "o4-mini"
+    litellm_params:
+      model: "openai/o4-mini"
+      api_key: os.environ/OPENAI_API_KEY
+      drop_params: true
+
+# General settings
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY  # Set this in your environment
+  database_url: "sqlite:///litellm.db"  # For caching and logging
+
+# Optional: Enable caching
+litellm_settings:
+  cache: true
+  cache_params:
+    type: "redis"  # or "local"
+    host: os.environ/REDIS_HOST
+    port: os.environ/REDIS_PORT
