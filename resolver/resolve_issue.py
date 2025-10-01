@@ -103,6 +103,9 @@ class PRArenaIssueResolver(IssueResolver):
         llm_retry_multiplier = int(os.environ.get("LLM_RETRY_MULTIPLIER", 2))
         llm_timeout = int(os.environ.get("LLM_TIMEOUT", 0))
 
+        # Use provided API key if available, otherwise fetch from secrets
+        llm_api_key = args.llm_api_key if hasattr(args, 'llm_api_key') and args.llm_api_key else Secrets.get_api_key()
+
         # Initialize values for custom resolver
         self.token = token
         self.username = username
@@ -142,7 +145,7 @@ class PRArenaIssueResolver(IssueResolver):
                 # GPT-5 needs very specific configuration - only default temperature (1.0) is supported
                 config_params = {
                     "model": model,
-                    "api_key": Secrets.get_api_key(),
+                    "api_key": llm_api_key,
                     "base_url": base_url,
                     "num_retries": llm_num_retries,
                     "retry_min_wait": llm_retry_min_wait,
@@ -171,7 +174,7 @@ class PRArenaIssueResolver(IssueResolver):
             else:
                 llm_config = LLMConfig(
                     model=model,
-                    api_key=Secrets.get_api_key(),
+                    api_key=llm_api_key,
                     base_url=base_url,
                     num_retries=llm_num_retries,
                     retry_min_wait=llm_retry_min_wait,

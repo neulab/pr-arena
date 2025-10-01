@@ -16,7 +16,7 @@ class CustomResolverOutput(ResolverOutput):
     error: str | None = Field(default=None)
     
     # Custom fields for PR-Arena
-    model: str | None = Field(default=None) # Set None default but ensure it gets filled later
+    model: str | None = Field(default=None)
     commit_hash: str | None = Field(default=None)
     repo_dir: str | None = Field(default=None)
     branch_name: str | None = Field(default=None)

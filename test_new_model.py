@@ -9,12 +9,12 @@ Usage:
     python test_new_model.py --model-name "gpt-4o" --api-key "your-key" --github-token "github-token"
     
 Example:
-    python test_new_model.py \
-        --model-name "litellm_proxy/neulab/gpt-4.1-2025-04-14" \
-        --api-key "sk-ant-..." \
-        --github-token "ghp_..." \
-        --repo "JiseungHong/web-hosting-gravisu" \
-        --issue-number 78
+    python test_new_model.py\
+        --model-name litellm_proxy/azure/gpt-5\
+        --api-key sk-...\
+        --github-token github_pat_...\
+        --repo "JiseungHong/SYCON-Bench"\
+        --issue-number 33
 """
 
 import argparse
@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from argparse import Namespace
 from typing import Any
+from unittest.mock import patch
 
 # Import the resolver classes
 from resolver.resolve_issue import PRArenaIssueResolver
@@ -73,11 +74,11 @@ def setup_logging(model_name: str) -> tuple[str, Path]:
     openhands_logger.setLevel(logging.DEBUG)
     
     # Enable detailed event logging
-    os.environ['DEBUG'] = 'true'
-    os.environ['LOG_ALL_EVENTS'] = 'true'
-    os.environ['LOG_LEVEL'] = 'DEBUG'
-    os.environ['DEBUG_RUNTIME'] = 'true'
-    os.environ['LOG_JSON'] = 'true'
+    # os.environ['DEBUG'] = 'true'
+    # os.environ['LOG_ALL_EVENTS'] = 'true'
+    # os.environ['LOG_LEVEL'] = 'DEBUG'
+    # os.environ['DEBUG_RUNTIME'] = 'true'
+    # os.environ['LOG_JSON'] = 'true'
     
     logger = logging.getLogger(__name__)
     logger.info("Starting comprehensive model test for: %s", model_name)
@@ -222,112 +223,120 @@ def save_detailed_traces(output_dir: str, trace_dir: Path, model_name: str,
 async def test_model_resolution(model_name: str, api_key: str, github_token: str,
                                repo: str, issue_number: int, github_username: str, trace_dir: Path) -> None:
     """Test a specific model's ability to resolve a GitHub issue."""
-    
-    logger = logging.getLogger(__name__)
-    
-    try:
-        # Set up the GitHub token for repository access
-        Secrets.TOKEN = github_token
-        
-        # Mock the get_api_key method to return our provided API key
-        # This bypasses the Firebase Function call for testing
-        def mock_get_api_key(cls=None):
-            return api_key
-        
-        # Replace the class method with our mock
-        setattr(Secrets, 'get_api_key', classmethod(mock_get_api_key))
-        
-        # Also set environment variable as fallback
-        os.environ['LLM_API_KEY'] = api_key
-        
-        # Create test arguments
-        args = create_test_args(model_name, api_key, github_token, repo, issue_number, github_username, trace_dir)
-        
-        print(f"Testing model: {model_name}")
-        print(f"Repository: {repo}")
-        print(f"Issue number: {issue_number}")
-        print(f"Output directory: {args.output_dir}")
-        
-        # Initialize the resolver
-        print("Initializing PRArenaIssueResolver...")
-        resolver = PRArenaIssueResolver(args)
-        
-        # Set up the issue handler (required for resolve_issue)
-        print("Setting up issue handler...")
-        llm_config = resolver.llm_configs[0]  # Use first available model
-        resolver.llm_config = llm_config
-        
-        factory = IssueHandlerFactory(
-            owner=resolver.owner,
-            repo=resolver.repo,
-            token=resolver.token,
-            username=resolver.username,
-            platform=ProviderType.GITHUB,
-            base_domain='github.com',
-            issue_type=resolver.issue_type,
-            llm_config=llm_config,
-        )
-        resolver.issue_handler = factory.create()
-        resolver.output_dir = args.output_dir
-        
-        # Run the resolution test
-        print("Starting issue resolution...")
-        start_time = datetime.now()
-        
-        # Use resolve_issue() instead of resolve_issues_with_random_models()
-        # since we want to test a single specific model
-        result = await resolver.resolve_issue()
-        
-        end_time = datetime.now()
-        duration = end_time - start_time
-        
-        # Log results
-        print(f"Resolution completed in {duration}")
-        print(f"Success: {result.success if result else 'Unknown'}")
-        
-        if result:
-            print(f"Result explanation: {result.result_explanation}")
-            print(f"Git patch generated: {'Yes' if result.git_patch else 'No'}")
-            if result.git_patch:
-                print(f"Patch length: {len(result.git_patch)} characters")
-                # Log first few lines of patch for quick preview
-                patch_lines = result.git_patch.split('\n')[:10]
-                print(f"Patch preview (first 10 lines):\n{chr(10).join(patch_lines)}")
-            
-            # Log cost information if available
-            if hasattr(result, 'accumulated_cost') and result.accumulated_cost:
-                print(f"Total cost: ${result.accumulated_cost:.4f}")
-            
-            # Log token usage if available
-            if hasattr(result, 'token_usage') and result.token_usage:
-                print(f"Token usage: {result.token_usage}")
-            
-            # Log any errors
-            if result.error:
-                print(f"Error occurred: {result.error}")
-        else:
-            print("No result returned from resolver")
-            
-        # Persist the resolver output for later inspection
-        resolver_output_file = Path(args.output_dir) / "resolver_output.txt"
-        try:
-            resolver_output_file.parent.mkdir(parents=True, exist_ok=True)
-            with resolver_output_file.open("w", encoding="utf-8") as f:
-                if result:
-                    json.dump(result.model_dump(), f, indent=2)
-                else:
-                    f.write("Resolver returned no result.\n")
-            print(f"Resolver output saved to {resolver_output_file}")
-        except Exception as write_err:
-            print(
-                f"Failed to write resolver output to {resolver_output_file}: {write_err}",
-            )
 
-        # Save detailed traces and artifacts
-        print("Saving detailed execution traces...")
-        save_detailed_traces(args.output_dir, trace_dir, model_name, issue_number, result)
-        print(f"All traces and artifacts saved to: {trace_dir}")
-            
+    logger = logging.getLogger(__name__)
+
+    # Set environment variables BEFORE any imports or initialization
+    # These will be inherited by the Docker container
+    os.environ['LLM_API_KEY'] = api_key
+    os.environ['LITELLM_API_KEY'] = api_key
+    os.environ['OPENAI_API_KEY'] = api_key  # OpenHands might use this
+
+    # Also set the base URL
+    os.environ['LLM_BASE_URL'] = 'https://cmu.litellm.ai'
+
+    # Mock function that returns the API key
+    def mock_get_api_key(cls=None):
+        logger.debug(f"Mock get_api_key called, returning API key: {api_key[:10]}...")
+        return api_key
+
+    try:
+        # Patch Secrets.get_api_key BEFORE creating the resolver
+        # This ensures the mock is active throughout the entire lifecycle
+        with patch.object(Secrets, 'get_api_key', classmethod(mock_get_api_key)):
+            # Set up the GitHub token for repository access
+            Secrets.TOKEN = github_token
+
+            logger.info(f"API key mock is active: {api_key[:10]}...")
+
+            # Create test arguments
+            args = create_test_args(model_name, api_key, github_token, repo, issue_number, github_username, trace_dir)
+
+            print(f"Testing model: {model_name}")
+            print(f"Repository: {repo}")
+            print(f"Issue number: {issue_number}")
+            print(f"Output directory: {args.output_dir}")
+
+            # Initialize the resolver (now with patched Secrets.get_api_key)
+            print("Initializing PRArenaIssueResolver...")
+            resolver = PRArenaIssueResolver(args)
+
+            # Set up the issue handler (required for resolve_issue)
+            print("Setting up issue handler...")
+            llm_config = resolver.llm_configs[0]  # Use first available model
+            resolver.llm_config = llm_config
+
+            factory = IssueHandlerFactory(
+                owner=resolver.owner,
+                repo=resolver.repo,
+                token=resolver.token,
+                username=resolver.username,
+                platform=ProviderType.GITHUB,
+                base_domain='github.com',
+                issue_type=resolver.issue_type,
+                llm_config=llm_config,
+            )
+            resolver.issue_handler = factory.create()
+            resolver.output_dir = args.output_dir
+
+            # Run the resolution test
+            print("Starting issue resolution...")
+            start_time = datetime.now()
+
+            # Use resolve_issue() instead of resolve_issues_with_random_models()
+            # since we want to test a single specific model
+            result = await resolver.resolve_issue()
+
+            end_time = datetime.now()
+            duration = end_time - start_time
+
+            # Log results
+            print(f"Resolution completed in {duration}")
+            print(f"Success: {result.success if result else 'Unknown'}")
+
+            if result:
+                print(f"Result explanation: {result.result_explanation}")
+                print(f"Git patch generated: {'Yes' if result.git_patch else 'No'}")
+                if result.git_patch:
+                    print(f"Patch length: {len(result.git_patch)} characters")
+                    # Log first few lines of patch for quick preview
+                    patch_lines = result.git_patch.split('\n')[:10]
+                    print(f"Patch preview (first 10 lines):\n{chr(10).join(patch_lines)}")
+
+                # Log cost information if available
+                if hasattr(result, 'accumulated_cost') and result.accumulated_cost:
+                    print(f"Total cost: ${result.accumulated_cost:.4f}")
+
+                # Log token usage if available
+                if hasattr(result, 'token_usage') and result.token_usage:
+                    print(f"Token usage: {result.token_usage}")
+
+                # Log any errors
+                if result.error:
+                    print(f"Error occurred: {result.error}")
+            else:
+                print("No result returned from resolver")
+
+            # Persist the resolver output for later inspection
+            resolver_output_file = Path(args.output_dir) / "resolver_output.txt"
+            try:
+                resolver_output_file.parent.mkdir(parents=True, exist_ok=True)
+                with resolver_output_file.open("w", encoding="utf-8") as f:
+                    if result:
+                        json.dump(result.model_dump(), f, indent=2)
+                    else:
+                        f.write("Resolver returned no result.\n")
+                print(f"Resolver output saved to {resolver_output_file}")
+            except Exception as write_err:
+                print(
+                    f"Failed to write resolver output to {resolver_output_file}: {write_err}",
+                )
+
+            # Save detailed traces and artifacts
+            print("Saving detailed execution traces...")
+            save_detailed_traces(args.output_dir, trace_dir, model_name, issue_number, result)
+            print(f"All traces and artifacts saved to: {trace_dir}")
+
     except Exception as e:
         logger.error(f"Test failed with exception: {str(e)}", exc_info=True)
         raise
@@ -395,14 +404,14 @@ def main():
     parser.add_argument(
         "--repo",
         type=str,
-        default="JiseungHong/web-hosting-gravisu",
-        help="GitHub repository in format 'owner/repo' (default: JiseungHong/web-hosting-gravisu)"
+        default="JiseungHong/SYCON-Bench",
+        help="GitHub repository in format 'owner/repo' (default: JiseungHong/SYCON-Bench)"
     )
     parser.add_argument(
         "--issue-number",
         type=int,
-        default=78,
-        help="Issue number to test resolution on (default: 78)"
+        default=33,
+        help="Issue number to test resolution on (default: 33)"
     )
     parser.add_argument(
         "--github-username",
