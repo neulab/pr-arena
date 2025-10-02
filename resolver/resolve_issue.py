@@ -491,6 +491,7 @@ class PRArenaIssueResolver(IssueResolver):
                     else None,
                     "success": resolved_output_1.success,
                     "comment_success": resolved_output_1.comment_success,
+                    "error": resolved_output_1.error,
                     "iterations": {
                         "total_iterations": resolved_output_1.total_iterations,
                         "action_count": resolved_output_1.action_count,
@@ -512,6 +513,7 @@ class PRArenaIssueResolver(IssueResolver):
                     else None,
                     "success": resolved_output_2.success,
                     "comment_success": resolved_output_2.comment_success,
+                    "error": resolved_output_2.error,
                     "iterations": {
                         "total_iterations": resolved_output_2.total_iterations,
                         "action_count": resolved_output_2.action_count,

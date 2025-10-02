@@ -1,0 +1,3 @@
+openhands-ai==0.40.0
+firebase-admin>=6.6.0
+openai>=1.99.5,<1.109.0
