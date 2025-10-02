@@ -73,13 +73,6 @@ class PRArenaIssueResolver(IssueResolver):
     def __init__(self, args: Namespace) -> None:
         # super().__init__(args) # Most shared arguments are processed by parent class
 
-        # Setup and validate container images
-        self.sandbox_config = self._setup_sandbox_config(
-            args.base_container_image,
-            args.runtime_container_image,
-            args.is_experimental,
-        )
-
         parts = args.selected_repo.rsplit("/", 1)
         if len(parts) < 2:
             raise ValueError("Invalid repository format. Expected owner/repo")
@@ -102,6 +95,16 @@ class PRArenaIssueResolver(IssueResolver):
         llm_retry_max_wait = int(os.environ.get("LLM_RETRY_MAX_WAIT", "30"))
         llm_retry_multiplier = int(os.environ.get("LLM_RETRY_MULTIPLIER", 2))
         llm_timeout = int(os.environ.get("LLM_TIMEOUT", 0))
+
+        # Use provided API key if available, otherwise fetch from secrets
+        llm_api_key = args.llm_api_key if hasattr(args, 'llm_api_key') and args.llm_api_key else Secrets.get_api_key()
+
+        # Setup and validate container images
+        self.sandbox_config = self._setup_sandbox_config(
+            args.base_container_image,
+            args.runtime_container_image,
+            args.is_experimental,
+        )
 
         # Initialize values for custom resolver
         self.token = token
@@ -142,7 +145,7 @@ class PRArenaIssueResolver(IssueResolver):
                 # GPT-5 needs very specific configuration - only default temperature (1.0) is supported
                 config_params = {
                     "model": model,
-                    "api_key": Secrets.get_api_key(),
+                    "api_key": llm_api_key,
                     "base_url": base_url,
                     "num_retries": llm_num_retries,
                     "retry_min_wait": llm_retry_min_wait,
@@ -156,22 +159,13 @@ class PRArenaIssueResolver(IssueResolver):
                 llm_config = LLMConfig(**config_params)
                 
                 # GPT-5 specific parameter cleanup - remove all custom parameters that aren't supported
-                if hasattr(llm_config, "temperature"):
-                    llm_config.temperature = None  # Use default (1.0)
-                if hasattr(llm_config, "stop"):
-                    llm_config.stop = None
-                if hasattr(llm_config, "top_p"):
-                    llm_config.top_p = None
-                if hasattr(llm_config, "max_tokens"):
-                    llm_config.max_tokens = 2000  # Shorter responses for precision
-                if hasattr(llm_config, "frequency_penalty"):
-                    llm_config.frequency_penalty = None
-                if hasattr(llm_config, "presence_penalty"):
-                    llm_config.presence_penalty = None
+                # GPT-5 only supports reasoning_effort parameter through allowed_openai_params
+                # These should be configured in the LiteLLM proxy YAML with:
+                #   allowed_openai_params: ["reasoning_effort"]
             else:
                 llm_config = LLMConfig(
                     model=model,
-                    api_key=Secrets.get_api_key(),
+                    api_key=llm_api_key,
                     base_url=base_url,
                     num_retries=llm_num_retries,
                     retry_min_wait=llm_retry_min_wait,
@@ -190,21 +184,12 @@ class PRArenaIssueResolver(IssueResolver):
                 if hasattr(llm_config, "simplify_tools"):
                     llm_config.simplify_tools = True
 
-            if "o4-mini" in model and hasattr(llm_config, "top_p"):
-                # o4-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o3-mini" in model and hasattr(llm_config, "top_p"):
-                # o3-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o1-mini" in model and hasattr(llm_config, "top_p"):
-                # o1-mini models require top_p to be set to None
-                llm_config.top_p = None
-
-            if "o1-mini" in model and hasattr(llm_config, "stop"):
-                # o1-mini models require stop to be set to None
-                llm_config.stop = None
+            # o-series models need specific parameter handling
+            # These models don't support certain OpenAI parameters
+            if "o4-mini" in model or "o3-mini" in model or "o1-mini" in model:
+                # The drop_params flag is already set above, which tells LiteLLM
+                # to automatically drop unsupported parameters
+                pass
 
             self.llm_configs.append(llm_config)
 
@@ -506,6 +491,7 @@ class PRArenaIssueResolver(IssueResolver):
                     else None,
                     "success": resolved_output_1.success,
                     "comment_success": resolved_output_1.comment_success,
+                    "error": resolved_output_1.error,
                     "iterations": {
                         "total_iterations": resolved_output_1.total_iterations,
                         "action_count": resolved_output_1.action_count,
@@ -527,6 +513,7 @@ class PRArenaIssueResolver(IssueResolver):
                     else None,
                     "success": resolved_output_2.success,
                     "comment_success": resolved_output_2.comment_success,
+                    "error": resolved_output_2.error,
                     "iterations": {
                         "total_iterations": resolved_output_2.total_iterations,
                         "action_count": resolved_output_2.action_count,
