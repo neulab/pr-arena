@@ -17,3 +17,4 @@ test_output_*/
 .venv/
 test_models_env/
 venv_*/
+venv_0.2.6/
