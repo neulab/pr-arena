@@ -124,8 +124,35 @@ jobs:
         if: steps.check_failure.outputs.failed == 'true'
         run: exit 1
 
+      - name: Check if both models failed to generate patches
+        id: check_both_empty
+        run: |
+          if [ "${{ env.BOTH_MODELS_EMPTY }}" == "TRUE" ]; then
+            echo "both_empty=true" >> $GITHUB_OUTPUT
+          else
+            echo "both_empty=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on issue when both models failed
+        if: steps.check_both_empty.outputs.both_empty == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ inputs.pat_token }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: ${{ inputs.issue_number }},
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ Both [Model A] and [Model B] failed to generate a fix! Please retry the workflow by removing the 'pr-arena' label and adding it back, or consider simplifying your issue.`
+            });
+
+      - name: Exit workflow if both models failed
+        if: steps.check_both_empty.outputs.both_empty == 'true'
+        run: exit 0
+
       - name: Post webpage link to GitHub issue comment
         id: post_webpage
+        if: steps.check_both_empty.outputs.both_empty != 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ inputs.pat_token }}
@@ -135,11 +162,26 @@ jobs:
             const owner = context.repo.owner
             const firebaseWebpageURL = `https://pr-arena-95f88.web.app/${{ env.UUID }}`;
 
+            const modelAEmpty = '${{ env.MODEL_A_EMPTY_PATCH }}' === 'TRUE';
+            const modelBEmpty = '${{ env.MODEL_B_EMPTY_PATCH }}' === 'TRUE';
+
+            let body = `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`;
+
+            if (modelAEmpty || modelBEmpty) {
+              body += '\n\n';
+              if (modelAEmpty) {
+                body += '↪ [Model A] failed to generate a fix';
+              }
+              if (modelBEmpty) {
+                body += '↪ [Model B] failed to generate a fix';
+              }
+            }
+
             github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                body: `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`
+                body: body
             });
             
       # This step will run if the job is about to be cancelled due to timeout

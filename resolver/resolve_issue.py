@@ -611,6 +611,11 @@ class PRArenaIssueResolver(IssueResolver):
         with open(github_env_path, "a") as env_file:
             env_file.write(f"UUID={reference_id}\n")
             env_file.write("FAILED=FALSE\n")
+            env_file.write(f"MODEL_A_EMPTY_PATCH={'TRUE' if model1_empty_patch else 'FALSE'}\n")
+            env_file.write(f"MODEL_B_EMPTY_PATCH={'TRUE' if model2_empty_patch else 'FALSE'}\n")
+            # Set flag if both models failed to generate patches
+            both_empty = model1_empty_patch and model2_empty_patch
+            env_file.write(f"BOTH_MODELS_EMPTY={'TRUE' if both_empty else 'FALSE'}\n")
 
         # print("Data successfully written to Firestore collections 'issue_collection' and 'user_collection'")
         # print(f"Issue ID: {self.issue_number}, Models: {resolved_output_1.model} vs {resolved_output_2.model}")
@@ -816,7 +821,7 @@ class PRArenaIssueResolver(IssueResolver):
         # logger.info(f"[DEBUG] Previous Patched Repo Dir: {patched_repo_dir}")
         branch_name, default_branch, base_url, headers = None, None, None, None
 
-        if resolver_output.git_patch:
+        if resolver_output.git_patch and resolver_output.git_patch.strip():
             # 2) apply_patch
             apply_patch(patched_repo_dir, resolver_output.git_patch)
 
