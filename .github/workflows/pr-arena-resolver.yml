@@ -76,6 +76,7 @@ jobs:
             --llm-base-url ${{ inputs.base_url }} \
             --llm-models '${{ env.LLM_MODELS }}'\
             --username ${{ inputs.pat_username }} \
+            --max-iterations 80
         continue-on-error: true
 
       - name: Check for failure

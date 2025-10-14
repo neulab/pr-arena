@@ -124,7 +124,7 @@ def create_test_args(model_name: str, api_key: str, github_token: str,
         
         # Output settings
         output_dir=output_dir,
-        max_iterations=50,
+        max_iterations=80,
         trace_dir=trace_dir_str,  # Add trace directory
         
         # Optional settings
