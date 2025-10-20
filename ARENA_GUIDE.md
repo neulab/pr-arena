@@ -19,7 +19,7 @@ Even if the Arena has closed or expired, you can still view the proposed fixes a
 
 3. **Navigate Through Commits**: You can navigate through each commit and vote only if you haven't voted yet.
 
-   ![Vote Model](assets/img/expired1.png)
+   ![Vote Model](assets/img/expired2.png)
 
 ## Testing Commits Locally
 
