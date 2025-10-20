@@ -45,7 +45,11 @@ def patch_openhands_for_gpt5():
         from openhands.llm import llm as openhands_llm_module
         if hasattr(openhands_llm_module, 'MODELS_WITHOUT_STOP_WORDS'):
             # Add GPT-5 models to the exclusion list (both base and full proxy names)
-            gpt5_models = ['gpt-5', 'litellm_proxy/neulab/gpt-5', 'litellm_proxy/azure/gpt-5', 'azure/gpt-5']
+            gpt5_models = [
+                'gpt-5', 'gpt-5-mini',
+                'litellm_proxy/neulab/gpt-5', 'litellm_proxy/azure/gpt-5', 'azure/gpt-5',
+                'litellm_proxy/neulab/gpt-5-mini', 'litellm_proxy/azure/gpt-5-mini', 'azure/gpt-5-mini'
+            ]
             current_models = list(openhands_llm_module.MODELS_WITHOUT_STOP_WORDS)
             for gpt5_model in gpt5_models:
                 if gpt5_model not in current_models:
@@ -128,38 +132,62 @@ class PRArenaIssueResolver(IssueResolver):
         for model in selected_models:
             # Determine if this model needs special parameter handling
             needs_drop_params = (
-                "o1-mini" in model
-                or "o3-mini" in model
-                or "o4-mini" in model
-                or "gemini" in model.lower()
+                "gemini" in model.lower()
                 or "gpt-5" in model.lower()
             )
 
             if "gpt-5" in model.lower():
-                gpt5_timeout = 300  # 5 minutes per API call
+                gpt5_timeout = 180  # 3 minutes per API call
                 print(f"GPT-5 detected: {model}, applying specialized configuration")
 
-                # GPT-5 needs very specific configuration - only default temperature (1.0) is supported
-                config_params = {
-                    "model": model,
-                    "api_key": Secrets.get_api_key(),
-                    "base_url": base_url,
-                    "num_retries": llm_num_retries,
-                    "retry_min_wait": llm_retry_min_wait,
-                    "retry_max_wait": llm_retry_max_wait,
-                    "retry_multiplier": llm_retry_multiplier,
-                    "timeout": gpt5_timeout,
-                    "drop_params": True,  # Critical for GPT-5
-                    # Note: GPT-5 only supports default temperature (1.0)
-                }
-                
-                llm_config = LLMConfig(**config_params)
-                
-                # GPT-5 specific parameter cleanup - remove all custom parameters that aren't supported
-                # GPT-5 only supports reasoning_effort parameter through allowed_openai_params
-                # These should be configured in the LiteLLM proxy YAML with:
-                #   allowed_openai_params: ["reasoning_effort"]
+                # GPT-5/GPT-5-mini needs very specific configuration
+                # These models don't support: stop, temperature, top_p
+                llm_config = LLMConfig(
+                    model=model,
+                    api_key=Secrets.get_api_key(),
+                    base_url=base_url,
+                    num_retries=llm_num_retries,
+                    retry_min_wait=llm_retry_min_wait,
+                    retry_max_wait=llm_retry_max_wait,
+                    retry_multiplier=llm_retry_multiplier,
+                    timeout=gpt5_timeout,
+                    drop_params=True,        # Drop unsupported params
+                    modify_params=True,      # Allow LiteLLM to modify params
+                )
+
+                # Set unsupported parameters to None so they're not sent to LiteLLM
+                # GPT-5 doesn't support temperature or top_p
+                llm_config.temperature = None
+                llm_config.top_p = None
+
+                # Stop words are handled by the monkey patch (MODELS_WITHOUT_STOP_WORDS)
+
+            elif "gemini" in model.lower():
+                print(f"Gemini detected: {model}, applying specialized configuration")
+
+                # Gemini models (especially 2.5 Pro) need specific configuration
+                llm_config = LLMConfig(
+                    model=model,
+                    api_key=Secrets.get_api_key(),
+                    base_url=base_url,
+                    num_retries=llm_num_retries,
+                    retry_min_wait=llm_retry_min_wait,
+                    retry_max_wait=llm_retry_max_wait,
+                    retry_multiplier=llm_retry_multiplier,
+                    timeout=llm_timeout,
+                    drop_params=True,        # Drop unsupported params
+                    modify_params=True,      # Allow LiteLLM to modify params
+                    native_tool_calling=True,  # Gemini supports native tool calling
+                )
+
+                # Gemini 2.5 Pro is a reasoning model - set temperature and top_p to None
+                # This prevents these parameters from being sent to the API
+                if "2.5" in model or "2-5" in model:
+                    llm_config.temperature = None
+                    llm_config.top_p = None
+
             else:
+                # Standard models
                 llm_config = LLMConfig(
                     model=model,
                     api_key=Secrets.get_api_key(),
@@ -171,22 +199,6 @@ class PRArenaIssueResolver(IssueResolver):
                     timeout=llm_timeout,
                     drop_params=needs_drop_params,
                 )
-
-            if "gemini" in model.lower():
-                # Gemini models have specific limitations on tool formats
-                # Set additional Gemini-specific configurations if needed
-                if hasattr(llm_config, "supports_function_calling"):
-                    llm_config.supports_function_calling = True
-                # Gemini models work better with simplified tool schemas
-                if hasattr(llm_config, "simplify_tools"):
-                    llm_config.simplify_tools = True
-
-            # o-series models need specific parameter handling
-            # These models don't support certain OpenAI parameters
-            if "o4-mini" in model or "o3-mini" in model or "o1-mini" in model:
-                # The drop_params flag is already set above, which tells LiteLLM
-                # to automatically drop unsupported parameters
-                pass
 
             self.llm_configs.append(llm_config)
 

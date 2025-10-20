@@ -13,6 +13,21 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 [![GitHub](https://img.shields.io/badge/JiseungHong-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/JiseungHong)
 [![Website](https://img.shields.io/badge/wlqmfl.com-4285F4?style=flat-square&logo=google-chrome&logoColor=white)](https://wlqmfl.com)
 
+## 7 LLMs ready to enter the Arena!
+
+<div align="center">
+
+![Claude Sonnet 4](https://img.shields.io/badge/Claude_Sonnet_4-191919?style=for-the-badge&logo=anthropic&logoColor=white)
+![DeepSeek R1](https://img.shields.io/badge/🐋_DeepSeek_R1-0084FF?style=for-the-badge)
+![GPT-4.1](https://img.shields.io/badge/GPT--4.1-10A37F?style=for-the-badge&logo=openai&logoColor=white)
+![Gemini 2.5 Pro](https://img.shields.io/badge/Gemini_2.5_Pro-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![Qwen3 Coder 480B](https://img.shields.io/badge/Qwen3_Coder_480B-FF6A00?style=for-the-badge&logo=alibaba-cloud&logoColor=white)
+![DeepSeek V3.1](https://img.shields.io/badge/🐋_DeepSeek_V3.1-0084FF?style=for-the-badge)
+![GPT-5 Mini](https://img.shields.io/badge/GPT--5_Mini-10A37F?style=for-the-badge&logo=openai&logoColor=white)
+
+</div>
+
+
 ## How to Get Started with the OpenHands PR Arena GitHub App
 
 ### How to use
@@ -39,7 +54,7 @@ Follow the instruction below to setup the Arena setting for the OpenHands resolv
 - For guidance on locally testing proposed fixes and viewing Arena results after closure, see [ARENA_GUIDE.md](ARENA_GUIDE.md).
 
 ## Privacy Notification
-1. The only code we collect is the `git_diff` generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
+1. The only code we collect is the `git_diff` and traces generated during issue resolution. We **never** access or store the entire codebase, access GitHub secrets, or release any user data.
 2. **Important**: Installing this App will automatically add a workflow file named `pr-arena-workflow.yml` to your repository. This file redirects to the actual resolver workflow located [here](https://github.com/neulab/pr-arena/blob/main/.github/workflows/pr-arena-resolver.yml). If you are concerned about repository workflows, we encourage you to review the resolver workflow to understand the operations it performs.
 3. Do not modify the injected workflow. Any modifications will prevent it from being triggered.
 4. Please install and use this app **only** on repositories where you consent to having code snippets (i.e., `git_diff`) processed by the LLM provider.
