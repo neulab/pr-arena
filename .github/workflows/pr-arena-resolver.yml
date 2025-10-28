@@ -167,14 +167,16 @@ jobs:
 
             let body = `⚔️PR-Arena is now open⚔️! You can view the proposed fixes and make a decision at [this link](${firebaseWebpageURL}).`;
 
-            if (modelAEmpty || modelBEmpty) {
-              body += '\n\n';
-              if (modelAEmpty) {
-                body += '↪ [Model A] failed to generate a fix';
-              }
-              if (modelBEmpty) {
-                body += '↪ [Model B] failed to generate a fix';
-              }
+            body += '\n\n';
+            if (modelAEmpty) {
+              body += '↪ [Model A] failed to generate a fix\n';
+            } else {
+              body += '↪ [Model A] succeeded in generating a fix 🤗\n';
+            }
+            if (modelBEmpty) {
+              body += '↪ [Model B] failed to generate a fix';
+            } else {
+              body += '↪ [Model B] succeeded in generating a fix 🤗';
             }
 
             github.rest.issues.createComment({
