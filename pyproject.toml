@@ -28,9 +28,9 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.12,<3.14"
-openhands-ai = "0.40.0"
-firebase-admin = "^6.6.0"
-openai = ">=1.99.5,<1.109.0"
+openhands-ai = "0.53.0"
+firebase-admin = ">=6.6,<8.0"
+openai = ">=1.99.5,<2.7.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "*"
