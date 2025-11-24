@@ -1,0 +1,13 @@
+# Constraints file to speed up pip dependency resolution
+# These are pinned to versions resolved by Poetry
+google-api-core==2.25.1
+google-api-python-client==2.172.0
+google-auth==2.40.3
+grpcio==1.73.0
+grpcio-status==1.62.3
+googleapis-common-protos==1.70.0
+protobuf==4.25.8
+urllib3==2.4.0
+firebase-admin==6.9.0
+openai==1.108.1
+openhands-ai==0.40.0
