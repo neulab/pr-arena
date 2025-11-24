@@ -60,8 +60,8 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          curl -o constraints.txt https://raw.githubusercontent.com/neulab/pr-arena/beta-test/constraints.txt
-          pip install -c constraints.txt git+https://github.com/neulab/pr-arena.git@beta-test
+          curl -o constraints.txt https://raw.githubusercontent.com/neulab/pr-arena/main/constraints.txt
+          pip install -c constraints.txt git+https://github.com/neulab/pr-arena.git@main
 
       - name: Attempt to resolve issues and send output to DB
         id: resolve_issues
