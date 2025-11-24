@@ -183,7 +183,7 @@ def main():
                     f.write(f'ERROR: {str(e)}\n')
                     f.write(traceback.format_exc())
                 print(f'Error written to: {output_file}')
-            except:
+            except Exception:
                 pass
         raise
 
