@@ -4,6 +4,7 @@ mypy.ini
 __pycache__
 output/
 .vscode
+.claude
 archive/
 .mypy_cache
 .DS_Store

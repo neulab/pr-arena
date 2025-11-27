@@ -61,7 +61,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           curl -o constraints.txt https://raw.githubusercontent.com/neulab/pr-arena/main/constraints.txt
-          pip install -c constraints.txt git+https://github.com/neulab/pr-arena.git@main
+          pip install -c constraints.txt pr-arena==0.2.10
 
       - name: Attempt to resolve issues and send output to DB
         id: resolve_issues
