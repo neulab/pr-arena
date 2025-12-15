@@ -113,7 +113,7 @@ def filter_binary_files_from_patch(patch: str) -> str:
             in_file = True
             if not skip_file:
                 filtered_lines.append(line)
-        elif line.startswith('diff --git') == False and in_file:
+        elif not line.startswith('diff --git') and in_file:
             if not skip_file:
                 filtered_lines.append(line)
         else:
