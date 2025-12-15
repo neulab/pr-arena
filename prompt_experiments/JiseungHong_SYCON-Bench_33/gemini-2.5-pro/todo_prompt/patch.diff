@@ -1,0 +1,11 @@
+diff --git a/TODO.md b/TODO.md
+new file mode 100644
+index 0000000..6c19913
+--- /dev/null
++++ b/TODO.md
+@@ -0,0 +1,5 @@
++# TODO
++
++- [ ] Add more settings
++- [ ] Add additional evaluation metrics
++- [ ] Add a command-line interface

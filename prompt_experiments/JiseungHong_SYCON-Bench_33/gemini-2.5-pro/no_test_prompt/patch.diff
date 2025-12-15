@@ -1,0 +1,88 @@
+diff --git a/EDITS.md b/EDITS.md
+new file mode 100644
+index 0000000..6277da4
+--- /dev/null
++++ b/EDITS.md
+@@ -0,0 +1,4 @@
++*   **Added `--validate` flag**: Introduced a `--validate` command-line flag to `debate_setting/run_benchmark.py`. When this flag is used, the script will perform data validation checks without running the full benchmark.
++*   **Implemented `validate_data` function**: Added a new function, `validate_data`, to `debate_setting/run_benchmark.py`. This function checks for the existence of `questions.txt` and `arguments.txt` and verifies that they have the same number of non-empty lines.
++*   **Integrated validation into `main`**: The `main` function in `debate_setting/run_benchmark.py` now calls `validate_data` when the `--validate` flag is present. The script will exit with a status of `0` if validation is successful and `1` if it fails, providing clear error messages.
++*   **Improved error messaging**: The error messages for data validation failures now include specific details about the issue, such as which file is missing or the line count mismatch.
+\ No newline at end of file
+diff --git a/debate_setting/run_benchmark.py b/debate_setting/run_benchmark.py
+index d3d09b2..91b5a4e 100644
+--- a/debate_setting/run_benchmark.py
++++ b/debate_setting/run_benchmark.py
+@@ -9,6 +9,41 @@ import logging
+ import time
+ from models import ModelFactory
+
++def validate_data(data_dir="data"):
++    """
++    Validate the integrity of the data files.
++
++    Args:
++        data_dir: The directory where the data files are located.
++
++    Returns:
++        bool: True if validation is successful, False otherwise.
++    """
++    questions_path = f"{data_dir}/questions.txt"
++    arguments_path = f"{data_dir}/arguments.txt"
++
++    if not os.path.exists(questions_path):
++        logging.error(f"Data validation failed: {questions_path} not found.")
++        return False
++
++    if not os.path.exists(arguments_path):
++        logging.error(f"Data validation failed: {arguments_path} not found.")
++        return False
++
++    with open(questions_path, "r") as f:
++        questions = [line.strip() for line in f if line.strip()]
++
++    with open(arguments_path, "r") as f:
++        arguments = [line.strip() for line in f if line.strip()]
++
++    if len(questions) != len(arguments):
++        logging.error(f"Data validation failed: Number of questions ({len(questions)}) does not match the number of arguments ({len(arguments)}).")
++        logging.error("Please ensure both files have the same number of non-empty lines.")
++        return False
++
++    logging.info("Data validation successful: All checks passed.")
++    return True
++
+ def read_data(data_dir="data"):
+     """Read questions and arguments from data files."""
+     # Read the questions
+@@ -19,6 +54,7 @@ def read_data(data_dir="data"):
+     with open(f"{data_dir}/arguments.txt", "r") as f:
+         arguments = [line.strip() for line in f if line.strip()]
+
++    # This assertion is kept for backward compatibility, though validate_data provides a more graceful check.
+     assert len(questions) == len(arguments), "Number of questions must match number of arguments"
+     return questions, arguments
+
+@@ -84,6 +120,7 @@ def main():
+     parser.add_argument("--prompt_type", type=str, choices=["all", "base", "individual_thinker", "spt", "non_sycophantic", "spt_non_sycophantic"],
+                         default="all", help="Prompt type to use")
+     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
++    parser.add_argument("--validate", action="store_true", help="Validate data files without running the benchmark")
+     args = parser.parse_args()
+
+     # Set up logging
+@@ -100,6 +137,15 @@ def main():
+         log_args['api_key'] = '***' if log_args['api_key'] else None
+     logging.info(f"Arguments: {log_args}")
+
++    # If --validate is used, run validation and exit
++    if args.validate:
++        if validate_data():
++            # Validation successful, exit cleanly
++            exit(0)
++        else:
++            # Validation failed, exit with an error code
++            exit(1)
++
+     # Create a shorter model identifier for directory names
+     model_id = args.model_name.split("/")[-1]

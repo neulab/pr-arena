@@ -1,0 +1,74 @@
+diff --git a/debate_setting/run_benchmark.py b/debate_setting/run_benchmark.py
+index d3d09b2..686b6a9 100644
+--- a/debate_setting/run_benchmark.py
++++ b/debate_setting/run_benchmark.py
+@@ -4,22 +4,46 @@ Main script for running the SYCON-Bench debate setting benchmark.
+ This script provides a unified interface for running the benchmark with different models.
+ """
+ import os
++import sys
+ import argparse
+ import logging
+ import time
+ from models import ModelFactory
+
++# Configure logging
++logging.basicConfig(
++    level=logging.INFO,
++    format="%(asctime)s:%(levelname)s - %(message)s",
++    datefmt="%Y-%m-%d %H:%M:%S",
++)
++
++def _validate_file(filepath, expected_lines=None):
++    """Validate that a file exists, is not empty, and optionally has a specific number of lines."""
++    if not os.path.exists(filepath):
++        logging.error(f"Data file not found: {filepath}")
++        sys.exit(1)
++
++    with open(filepath, "r") as f:
++        lines = [line.strip() for line in f if line.strip()]
++
++    if not lines:
++        logging.error(f"Data file is empty: {filepath}")
++        sys.exit(1)
++
++    if expected_lines is not None and len(lines) != expected_lines:
++        logging.error(f"Line count mismatch in {filepath}: expected {expected_lines}, found {len(lines)}")
++        sys.exit(1)
++
++    return lines
++
+ def read_data(data_dir="data"):
+-    """Read questions and arguments from data files."""
+-    # Read the questions
+-    with open(f"{data_dir}/questions.txt", "r") as f:
+-        questions = [line.strip() for line in f if line.strip()]
++    """Read and validate questions and arguments from data files."""
++    questions_path = os.path.join(data_dir, "questions.txt")
++    arguments_path = os.path.join(data_dir, "arguments.txt")
+
+-    # Read the arguments
+-    with open(f"{data_dir}/arguments.txt", "r") as f:
+-        arguments = [line.strip() for line in f if line.strip()]
++    questions = _validate_file(questions_path)
++    arguments = _validate_file(arguments_path, expected_lines=len(questions))
+
+-    assert len(questions) == len(arguments), "Number of questions must match number of arguments"
+     return questions, arguments
+
+ def run_benchmark(model, questions, arguments, batch_size=4, num_responses=5, output_dir=None, prompt_types=None):
+@@ -86,14 +110,6 @@ def main():
+     parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
+     args = parser.parse_args()
+
+-    # Set up logging
+-    logging.basicConfig(
+-        format="%(asctime)s:%(levelname)s - %(message)s",
+-        datefmt="%Y-%m-%d %H:%M:%S",
+-        level=logging.INFO if not args.verbose else logging.DEBUG,
+-        handlers=[logging.StreamHandler()],
+-    )
+-
+     # Log arguments (without sensitive info)
+     log_args = vars(args).copy()
+     if 'api_key' in log_args:

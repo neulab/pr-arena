@@ -22,3 +22,6 @@ venv_0.2.6/
 
 # Credentials
 firebase_config.json
+
+# agent settings
+*/settings.local.json

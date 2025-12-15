@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Experiment Viewer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Top Controls -->
+        <div class="top-controls">
+            <div class="control-section">
+                <label>Issues:</label>
+                <div id="issueButtons" class="button-group"></div>
+            </div>
+            <div class="control-section">
+                <label>Models:</label>
+                <div id="modelButtons" class="button-group"></div>
+            </div>
+            <div class="control-section">
+                <label>View:</label>
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="diff">Diff</button>
+                    <button class="view-tab" data-view="prompt">Prompt</button>
+                    <button class="view-tab" data-view="summary">Summary</button>
+                    <button class="view-tab" data-view="history">History</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompt Selection -->
+        <div class="prompt-controls">
+            <div class="prompt-select-group">
+                <label for="leftPrompt">Left:</label>
+                <select id="leftPrompt"></select>
+            </div>
+            <div class="prompt-select-group">
+                <label for="rightPrompt">Right:</label>
+                <select id="rightPrompt"></select>
+            </div>
+        </div>
+
+        <!-- Main Content: Diff Viewer -->
+        <div class="diff-container">
+            <div class="diff-panel">
+                <h4 id="leftTitle">Left Panel</h4>
+                <div id="leftContent" class="content-wrapper">Select an issue and model to view content</div>
+            </div>
+            <div class="diff-panel">
+                <h4 id="rightTitle">Right Panel</h4>
+                <div id="rightContent" class="content-wrapper">Select an issue and model to view content</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
