@@ -1,0 +1,15 @@
+{
+  "model_name": "litellm_proxy/neulab/gemini-2.5-pro",
+  "repo": "JiseungHong/SYCON-Bench",
+  "issue_number": 33,
+  "prompt_name": "basic_prompt",
+  "timestamp": "2025-12-14T20:29:39.442789",
+  "duration_seconds": 391.097667,
+  "success": true,
+  "has_git_patch": true,
+  "git_patch_length": 6056,
+  "accumulated_cost": 0.6102440625000001,
+  "total_iterations": 77,
+  "action_count": 40,
+  "error": null
+}

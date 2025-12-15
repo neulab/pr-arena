@@ -1,0 +1,12 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Ignore heavy experiment artifacts
+*/*/repo/
+*/*/infer_logs/
+*/*/workspace/
+
+# Keep experiment results (patch.diff, result.json, summary.json, experiment.log)

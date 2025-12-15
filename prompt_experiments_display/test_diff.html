@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
+    <style>
+        body { margin: 20px; font-family: monospace; }
+        .test-container { border: 1px solid #ddd; margin: 10px 0; }
+        h3 { background: #f0f0f0; padding: 10px; margin: 0; }
+    </style>
+</head>
+<body>
+    <h2>Diff Rendering Test</h2>
+    
+    <div class="test-container">
+        <h3>Line-by-line (unified view)</h3>
+        <div id="line-by-line"></div>
+    </div>
+    
+    <div class="test-container">
+        <h3>Side-by-side (split view)</h3>
+        <div id="side-by-side"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+    <script>
+        const sampleDiff = `diff --git a/test.py b/test.py
+index 1234567..abcdefg 100644
+--- a/test.py
++++ b/test.py
+@@ -1,5 +1,5 @@
+ def hello():
+-    print("old")
++    print("new")
+     return True`;
+
+        new Diff2HtmlUI(document.getElementById('line-by-line'), sampleDiff, {
+            drawFileList: false,
+            outputFormat: 'line-by-line'
+        }).draw();
+
+        new Diff2HtmlUI(document.getElementById('side-by-side'), sampleDiff, {
+            drawFileList: false,
+            outputFormat: 'side-by-side'
+        }).draw();
+    </script>
+</body>
+</html>
